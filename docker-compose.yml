@@ -1,0 +1,7 @@
+services:
+  app:
+    image: ghcr.io/fishxcode/fishxlab:latest
+    container_name: fishxlab
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
