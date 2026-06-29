@@ -1,20 +1,22 @@
+> Fork from [basketikun/infinite-canvas](https://github.com/basketikun/infinite-canvas) — based on AGPL-3.0. This fork keeps the original author attribution and [canvas.best](https://canvas.best/) source marker.
+
 <p align="center">
-  <img src="web/public/logo.svg" width="96" alt="infinite-canvas logo">
+  <img src="web/public/logo.png" width="96" alt="fishxlab logo">
 </p>
 
-<h1 align="center">无限画布 (infinite-canvas)</h1>
+<h1 align="center">fishxlab</h1>
 
 <p align="center">
   <a href="https://linux.do/"><img src="https://img.shields.io/badge/Linux.do-Community-2b6de8?style=flat-square" alt="Linux.do"></a>
-  <a href="https://render.com/deploy?repo=https://github.com/basketikun/infinite-canvas"><img src="https://img.shields.io/badge/Render-Deploy-46e3b7?style=flat-square&logo=render&logoColor=111111" alt="Deploy to Render"></a>
-  <a href="https://github.com/basketikun/infinite-canvas"><img src="https://img.shields.io/github/stars/basketikun/infinite-canvas?style=flat-square&logo=github" alt="GitHub stars"></a>
-  <a href="VERSION"><img src="https://img.shields.io/badge/version-v0.2.0-2563eb?style=flat-square" alt="Version"></a>
+  <a href="https://render.com/deploy?repo=https://github.com/fishxcode/fishxlab"><img src="https://img.shields.io/badge/Render-Deploy-46e3b7?style=flat-square&logo=render&logoColor=111111" alt="Deploy to Render"></a>
+  <a href="https://github.com/fishxcode/fishxlab"><img src="https://img.shields.io/github/stars/fishxcode/fishxlab?style=flat-square&logo=github" alt="GitHub stars"></a>
+  <a href="VERSION"><img src="https://img.shields.io/badge/version-v0.0.1-2563eb?style=flat-square" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-f97316?style=flat-square" alt="License"></a>
   <a href="https://vercel.com/"><img src="https://img.shields.io/badge/Vercel-ready-000000?style=flat-square&logo=vercel" alt="Vercel ready"></a>
   <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-16.2-000000?style=flat-square&logo=nextdotjs" alt="Next.js"></a>
 </p>
 
-无限画布是一款面向图片创作的开源工作台。它把画布编排、AI 图片生成、参考图编辑、对话助手、提示词库和素材沉淀放在同一个界面里，适合用来探索视觉方案并连续迭代图片结果。
+fishxlab 是一款面向 fishxapi 用户优化的 Pro Canvas 创作工作台。它把画布编排、AI 图片生成、参考图编辑、对话助手、提示词库和素材沉淀放在同一个界面里，适合用来探索视觉方案并连续迭代图片结果。
 
 > [!CAUTION]
 > 项目目前处于开发阶段，不保证历史数据兼容。各种数据库结构和存储格式都可能直接调整，欢迎关注后续更新，当前更适合个人/本地部署，不建议直接公网多人共用。
@@ -23,7 +25,7 @@
 
 ## 核心功能
 
-- 无限画布：多画布项目、节点拖拽缩放、连线、小地图、撤销重做、导入导出。
+- Pro Canvas：多画布项目、节点拖拽缩放、连线、小地图、撤销重做、导入导出。
 - AI 创作：浏览器前台直连你配置的 OpenAI 兼容接口，支持文生图、图生图、参考图编辑、文本问答、音频和视频生成；Seedance 2.0 可通过火山方舟 Agent Plan 接入。
 - 画布助手：围绕选中节点和上游节点对话、生图，并把结果插回画布。
 - 本地 Agent：通过本机 Canvas Agent 连接 Codex / Claude Code，让 Agent 通过 MCP 操作当前画布。
@@ -44,8 +46,8 @@
 推荐直接导入仓库到 Vercel，根目录已提供 `vercel.json`，会构建 `web/`。AI API Key、Base URL、画布、素材和生成记录默认保存在浏览器本地。
 
 ```bash
-git clone git@github.com:basketikun/infinite-canvas.git
-cd infinite-canvas
+git clone git@github.com:fishxcode/fishxlab.git
+cd fishxlab
 cd web
 bun install
 bun run dev
@@ -54,24 +56,33 @@ bun run dev
 Docker 运行：
 
 ```bash
-docker build -t infinite-canvas .
-docker run --rm -p 3000:3000 infinite-canvas
+docker build -t fishxlab .
+docker run --rm -p 3000:3000 fishxlab
 ```
 
 运行后默认端口3000，可访问 `http://localhost:3000`。
 
 首次打开后进入右上角配置，填入自己的 OpenAI 兼容 `Base URL` 和 `API Key`。
 
+## 数据与持久化
+
+当前版本不需要注册登录，也没有服务端用户数据库。
+
+- API Key、模型配置、画布、素材、生图记录和视频记录默认保存在当前浏览器本地。
+- 本地保存依赖浏览器 IndexedDB/localForage。只要不清理站点数据，刷新页面或重启浏览器后仍会保留。
+- 这不是云端永久存储。切换浏览器、切换设备、切换部署域名、使用无痕窗口或清理浏览器数据后，本地数据不会自动带过去。
+- 长期保存建议使用画布/素材导出，或在设置中配置 WebDAV 同步。WebDAV 同步用于画布、素材和生成记录，不同步 API Key。
+
 ## New API 自动配置
 
 如果使用 New API，可在 `系统设置 -> 聊天方式 -> 添加聊天设置` 中填入：
 
 ```text
-https://canvas.best?apiKey={key}&baseUrl={address}
+https://fishxlab.fishxcode.com?apiKey={key}&baseUrl={address}
 ```
 
 跳转后会自动打开配置弹窗并填入 API Key 和 Base URL。
-如果自己部署了，可以把 `https://canvas.best` 替换成你部署的地址。
+如果自己部署了，可以把 `https://fishxlab.fishxcode.com` 替换成你部署的地址。
 
 ## 效果展示
 
@@ -96,6 +107,7 @@ https://canvas.best?apiKey={key}&baseUrl={address}
 
 ## 文档
 
+- [在线文档](https://docs.fishxcode.com/)
 - [快速开始](docs/content/docs/overview/quick-start.mdx)
 - [功能介绍](docs/content/docs/overview/features.mdx)
 - [Render 部署](docs/content/docs/overview/render.mdx)
@@ -136,10 +148,10 @@ https://canvas.best?apiKey={key}&baseUrl={address}
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=basketikun%2Finfinite-canvas&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=fishxcode%2Ffishxlab&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=basketikun/infinite-canvas&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=basketikun/infinite-canvas&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=basketikun/infinite-canvas&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=fishxcode/fishxlab&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=fishxcode/fishxlab&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=fishxcode/fishxlab&type=date&legend=top-left" />
  </picture>
 </a>

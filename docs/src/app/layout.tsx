@@ -1,5 +1,11 @@
 import { Provider } from '@/components/provider';
+import type { Metadata } from 'next';
 import './global.css';
+
+export const metadata: Metadata = {
+  title: 'fishxlab',
+  description: 'fishxlab Pro Canvas 创作工作台文档',
+};
 
 export default function Layout({ children }: LayoutProps<'/'>) {
   return (

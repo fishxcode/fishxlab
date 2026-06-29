@@ -10,7 +10,7 @@ export function baseOptions(): BaseLayoutProps {
     nav: {
       title: (
         <span className="inline-flex items-center gap-2 font-semibold">
-          <img src="/logo.svg" alt={appName} className="h-6 w-6" />
+          <img src="/logo.png" alt={appName} className="h-6 w-6 rounded-md dark:invert" />
           <span>{appName}</span>
         </span>
       ),
@@ -28,7 +28,7 @@ export function baseOptions(): BaseLayoutProps {
             <ArrowUpRight className="size-4" />
           </span>
         ),
-        url: 'https://canvas.best/',
+        url: 'https://fishxlab.fishxcode.com/',
         external: true,
         on: 'nav',
       },

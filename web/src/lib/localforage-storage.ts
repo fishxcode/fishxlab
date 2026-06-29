@@ -2,7 +2,7 @@ import localforage from "localforage";
 import type { StateStorage } from "zustand/middleware";
 
 localforage.config({
-    name: "infinite-canvas",
+    name: "fishxlab",
     storeName: "app_state",
 });
 

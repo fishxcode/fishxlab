@@ -578,7 +578,14 @@ function InfiniteCanvasPage() {
 
     const createConnectedNode = useCallback(
         (type: CanvasNodeType.Image | CanvasNodeType.Text | CanvasNodeType.Config | CanvasNodeType.Video | CanvasNodeType.Audio, pending: PendingConnectionCreate) => {
-            const metadata = type === CanvasNodeType.Config ? { model: effectiveConfig.imageModel || effectiveConfig.model, size: effectiveConfig.size, count: getGenerationCount(effectiveConfig.canvasImageCount || effectiveConfig.count) } : undefined;
+            const sourceNode = nodesRef.current.find((item) => item.id === pending.connection.nodeId);
+            const reusedModel = type !== CanvasNodeType.Config && sourceNode?.type === type ? sourceNode.metadata?.model : undefined;
+            const metadata =
+                type === CanvasNodeType.Config
+                    ? { model: effectiveConfig.imageModel || effectiveConfig.model, size: effectiveConfig.size, count: getGenerationCount(effectiveConfig.canvasImageCount || effectiveConfig.count) }
+                    : reusedModel
+                      ? { model: reusedModel }
+                      : undefined;
             const newNode = createCanvasNode(type, pending.position, metadata);
             const connection = normalizeConnection(pending.connection.nodeId, newNode.id, [...nodesRef.current, newNode], pending.connection.handleType);
             if (!connection) {
@@ -1014,7 +1021,7 @@ function InfiniteCanvasPage() {
     }, [applyHistory]);
 
     const createAndOpenProject = useCallback(() => {
-        const id = createProject(`无限画布 ${useCanvasStore.getState().projects.length + 1}`);
+        const id = createProject(`Pro Canvas ${useCanvasStore.getState().projects.length + 1}`);
         router.push(`/canvas/${id}`);
     }, [createProject, router]);
 

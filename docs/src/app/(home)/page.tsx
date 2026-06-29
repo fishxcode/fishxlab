@@ -3,7 +3,7 @@ import { ArrowUpRight, BookOpen, Rocket } from 'lucide-react';
 import { appName, gitConfig } from '@/lib/shared';
 
 const githubUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`;
-const demoUrl = 'https://canvas.best/';
+const demoUrl = 'https://fishxlab.fishxcode.com/';
 const starHistoryUrl = `https://www.star-history.com/?repos=${gitConfig.user}%2F${gitConfig.repo}&type=date`;
 const starHistoryChart = `https://api.star-history.com/chart?repos=${gitConfig.user}/${gitConfig.repo}&type=date&transparent=true`;
 const darkStarHistoryChart = `${starHistoryChart}&theme=dark`;
@@ -34,14 +34,14 @@ export default function HomePage() {
         <div>
           <div className="inline-flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
             <Rocket className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-            开源 AI 图片创作工作台
+            fishxlab 原生 AI 创作工作台
           </div>
           <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-tight text-zinc-950 dark:text-zinc-50 md:text-6xl [font-family:var(--font-display)]">
             {appName}
             <span className="block text-zinc-500 dark:text-zinc-400">文档中心</span>
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-8 text-zinc-600 dark:text-zinc-400">
-            面向图片创作的无限画布，把画布编排、AI 生成、参考图编辑、提示词库和素材沉淀放在同一个工作流里。
+            fishxlab 把 Pro Canvas 编排、AI 生成、参考图编辑、提示词库和素材沉淀放在同一个工作流里。
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
@@ -75,7 +75,7 @@ export default function HomePage() {
         <div className="overflow-hidden rounded-2xl lg:w-[108%] lg:max-w-none">
           <img
             src={previewImages[3].src}
-            alt="无限画布效果图"
+            alt="fishxlab 效果图"
             className="aspect-[16/10] w-full rounded-xl object-cover"
           />
         </div>

@@ -1,12 +1,14 @@
 {
-    "name": "infinite-canvas",
-    "version": "0.1.0",
+    "name": "fishxlab",
+    "version": "0.0.2",
     "private": true,
     "type": "module",
     "scripts": {
         "dev": "next dev --webpack -H 0.0.0.0 -p 3000",
         "build": "next build",
         "start": "next start",
+        "test:pro-spec": "bun test src/lib/pro-spec/__tests__/inference.test.ts",
+        "dry-run:adapter": "bun scripts/dry-run-adapter.ts",
         "format": "prettier --write .",
         "format:check": "prettier --check ."
     },

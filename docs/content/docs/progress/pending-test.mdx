@@ -8,3 +8,5 @@ description: 当前版本已实现但仍需人工验证的变更项
 - 配置与用户偏好：每个模型渠道新增 OpenAI / Gemini 调用格式选择，默认 OpenAI，切换默认格式时同步更新默认 Base URL；渠道 Tab 增加紧凑醒目的提醒，说明模型是否可选需要到“模型”Tab 选择。
 - Gemini 调用格式：支持拉取 Gemini 模型列表，并用于文本问答、在线 Agent 工具调用、基础生图和图生图请求。
 - 音频和视频生成：选择 Gemini 调用格式时先给出不支持提示，仍需使用 OpenAI 兼容渠道。
+- fishxapi 一键接入：首次未配置时自动弹出接入弹窗，支持 URL 参数预填 `apiKey` / `baseUrl`，拉取 OpenAI 兼容 `/v1/models` 后按模型推断结果分组并显示模型图标，完成后写入浏览器本地持久化配置。
+- fishxapi provider 适配：`grok-imagine` / `hunyuan-image-v3` 等文生图走 DALL-E 兼容 `/v1/images/generations`，`grok-imagine-image-edit` / `qwen-image-edit` / `flux-kontext-*` 等图生图走 multipart `/v1/images/edits`，`grok-imagine-video` 走 multipart `/v1/videos`，`grok-video-chat` 走 `/v1/chat/completions`；本地视频参考图无法浏览器直连时会给出明确错误。

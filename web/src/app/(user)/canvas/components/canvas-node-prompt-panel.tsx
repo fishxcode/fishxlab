@@ -77,7 +77,7 @@ export function CanvasNodePromptPanel({ node, isRunning, onPromptChange, onConfi
             />
 
             <div className="mt-2 flex min-w-0 items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
                     <CanvasPromptLibrary onSelect={updatePrompt} />
                     {mode === "image" ? (
                         <>
