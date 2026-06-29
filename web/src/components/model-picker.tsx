@@ -4,8 +4,9 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { Cpu } from "lucide-react";
 
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { getModelLogoById } from "@/lib/pro-spec/model-logo";
 import { cn } from "@/lib/utils";
-import { modelOptionLabel, modelOptionName, selectableModelsByCapability, type AiConfig, type ModelCapability } from "@/stores/use-config-store";
+import { modelOptionName, modelOptionSearchText, modelOptionSourceLabel, selectableModelsByCapability, type AiConfig, type ModelCapability } from "@/stores/use-config-store";
 
 type ModelPickerProps = {
     config: AiConfig;
@@ -52,10 +53,11 @@ export function ModelPicker({ config, value, onChange, capability, className, fu
                 )}
                 onMouseDown={(event) => event.stopPropagation()}
                 onPointerDown={(event) => event.stopPropagation()}
-                title={current ? modelOptionLabel(config, current) : placeholder}
+                title={current ? modelOptionSearchText(config, current) : placeholder}
             >
                 <ModelIcon model={current} />
-                <span className="canvas-model-picker-text min-w-0 flex-1 truncate text-left">{current ? modelOptionLabel(config, current) : placeholder}</span>
+                <span className="canvas-model-picker-text min-w-0 flex-1 truncate text-left">{current ? modelOptionName(current) : placeholder}</span>
+                {current ? <span className="hidden max-w-28 shrink-0 truncate text-xs text-muted-foreground sm:inline">{modelOptionSourceLabel(config, current)}</span> : null}
             </SelectTrigger>
             <SelectContent
                 data-canvas-no-zoom
@@ -69,7 +71,7 @@ export function ModelPicker({ config, value, onChange, capability, className, fu
             >
                 {options.length ? (
                     options.map((model) => (
-                        <SelectItem key={model} value={model} textValue={modelOptionLabel(config, model)}>
+                        <SelectItem key={model} value={model} textValue={modelOptionSearchText(config, model)}>
                             <ModelLabel config={config} model={model} />
                         </SelectItem>
                     ))
@@ -93,7 +95,10 @@ function ModelLabel({ config, model }: { config: AiConfig; model: string }) {
     return (
         <span className="flex min-w-0 items-center gap-2">
             <ModelIcon model={model} />
-            <span className="truncate">{modelOptionLabel(config, model)}</span>
+            <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="truncate">{modelOptionName(model)}</span>
+                <span className="truncate text-[11px] leading-4 text-muted-foreground">{modelOptionSourceLabel(config, model)}</span>
+            </span>
         </span>
     );
 }
@@ -104,12 +109,5 @@ function ModelIcon({ model }: { model: string }) {
 }
 
 function resolveModelIcon(model: string) {
-    const name = model.toLowerCase();
-    if (name.includes("claude") || name.includes("anthropic")) return "/icons/claude.svg";
-    if (name.includes("gemini") || name.includes("google")) return "/icons/gemini.svg";
-    if (name.includes("gpt") || name.includes("openai")) return "/icons/openai.svg";
-    if (name.includes("grok") || name.includes("grok")) return "/icons/grok.svg";
-    if (name.includes("deepseek") || name.includes("deepseek")) return "/icons/deepseek.svg";
-    if (name.includes("glm") || name.includes("glm")) return "/icons/glm.svg";
-    return "";
+    return getModelLogoById(model) || "";
 }

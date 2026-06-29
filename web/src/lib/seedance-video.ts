@@ -75,6 +75,13 @@ export function isArkPlanBaseUrl(baseUrl: string) {
     return baseUrl.toLowerCase().includes("ark.cn-beijing.volces.com/api/plan/v3") || baseUrl.toLowerCase().includes("/api/plan/v3");
 }
 
+// 是否为「直连火山原生任务接口」的 baseUrl：火山 Ark(/api/plan/v3)或直连 PixVerse(/api/v3)。
+// 这类 baseUrl 才走原生 content[] + /contents/generations/tasks；New-API 代理走 OpenAI 扁平格式。
+export function isSeedanceNativeTaskBaseUrl(baseUrl: string) {
+    const value = (baseUrl || "").trim().replace(/\/+$/, "").toLowerCase();
+    return isArkPlanBaseUrl(value) || value.endsWith("/api/v3");
+}
+
 export function normalizeSeedanceResolution(value: string, model = "") {
     const normalized = normalizeResolutionToken(value);
     if (isSeedanceFastModel(model) && normalized === "1080p") return "720p";
@@ -134,11 +141,7 @@ export function seedanceReferenceLabel(kind: "image" | "video" | "audio", index:
 }
 
 export function buildSeedancePromptText(prompt: string, images: ReferenceImage[], videos: ReferenceVideo[], audios: ReferenceAudio[]) {
-    const labels = [
-        ...images.map((_, index) => seedanceReferenceLabel("image", index)),
-        ...videos.map((_, index) => seedanceReferenceLabel("video", index)),
-        ...audios.map((_, index) => seedanceReferenceLabel("audio", index)),
-    ];
+    const labels = [...images.map((_, index) => seedanceReferenceLabel("image", index)), ...videos.map((_, index) => seedanceReferenceLabel("video", index)), ...audios.map((_, index) => seedanceReferenceLabel("audio", index))];
     const text = prompt.trim();
     if (!labels.length) return text;
     return `参考素材编号：${labels.join("、")}。请按这些编号理解提示词中的图片、视频和音频引用。\n\n${text}`;

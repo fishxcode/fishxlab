@@ -1,50 +1,51 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useRef } from "react";
-import { App } from "antd";
+import { useEffect, useRef, useState } from "react";
 
-import { createModelChannel, useConfigStore } from "@/stores/use-config-store";
+import { QuickConnectModal } from "@/components/onboarding/quick-connect-modal";
+import { DEFAULT_UPSTREAM } from "@/lib/pro-spec/constants";
+import { useConfigStore } from "@/stores/use-config-store";
 
 export function ClientRootInit({ children }: { children: ReactNode }) {
-    const { message } = App.useApp();
     const handledConfigParams = useRef(false);
-    const updateConfig = useConfigStore((state) => state.updateConfig);
+    const [quickConnectOpen, setQuickConnectOpen] = useState(false);
+    const [presetApiKey, setPresetApiKey] = useState("");
+    const [presetBaseUrl, setPresetBaseUrl] = useState<string>(DEFAULT_UPSTREAM.baseUrl);
+    const hydrated = useConfigStore((state) => state.hydrated);
     const config = useConfigStore((state) => state.config);
-    const openConfigDialog = useConfigStore((state) => state.openConfigDialog);
 
     useEffect(() => {
+        if (!hydrated) return;
         if (handledConfigParams.current) return;
         const searchParams = new URLSearchParams(window.location.search);
         const baseUrl = searchParams.get("baseUrl") || searchParams.get("baseurl");
         const apiKey = searchParams.get("apiKey") || searchParams.get("apikey");
-        if (!baseUrl && !apiKey) return;
-        handledConfigParams.current = true;
-        searchParams.delete("baseUrl");
-        searchParams.delete("baseurl");
-        searchParams.delete("apiKey");
-        searchParams.delete("apikey");
-        window.history.replaceState(null, "", `${window.location.pathname}${searchParams.size ? `?${searchParams}` : ""}${window.location.hash}`);
-        const firstChannel = config.channels[0];
-        updateConfig(
-            "channels",
-            firstChannel
-                ? config.channels.map((channel, index) =>
-                      index === 0
-                          ? {
-                                ...channel,
-                                ...(baseUrl ? { baseUrl } : {}),
-                                ...(apiKey ? { apiKey } : {}),
-                            }
-                          : channel,
-                  )
-                : [createModelChannel({ id: "default", name: "默认渠道", baseUrl: baseUrl || undefined, apiKey: apiKey || "" })],
-        );
-        if (baseUrl) updateConfig("baseUrl", baseUrl);
-        if (apiKey) updateConfig("apiKey", apiKey);
-        openConfigDialog(false);
-        message.success("已导入本地直连配置");
-    }, [config.channels, message, openConfigDialog, updateConfig]);
+        if (baseUrl || apiKey) {
+            handledConfigParams.current = true;
+            searchParams.delete("baseUrl");
+            searchParams.delete("baseurl");
+            searchParams.delete("apiKey");
+            searchParams.delete("apikey");
+            window.history.replaceState(null, "", `${window.location.pathname}${searchParams.size ? `?${searchParams}` : ""}${window.location.hash}`);
+            setPresetBaseUrl(baseUrl || DEFAULT_UPSTREAM.baseUrl);
+            setPresetApiKey(apiKey || "");
+            setQuickConnectOpen(true);
+            return;
+        }
+        const ready = config.channels.some((channel) => channel.baseUrl.trim() && channel.apiKey.trim() && channel.models.length);
+        if (!ready) {
+            handledConfigParams.current = true;
+            setPresetBaseUrl(DEFAULT_UPSTREAM.baseUrl);
+            setPresetApiKey("");
+            setQuickConnectOpen(true);
+        }
+    }, [config.channels, hydrated]);
 
-    return <>{children}</>;
+    return (
+        <>
+            {children}
+            <QuickConnectModal open={quickConnectOpen} initialApiKey={presetApiKey} initialBaseUrl={presetBaseUrl} onClose={() => setQuickConnectOpen(false)} />
+        </>
+    );
 }

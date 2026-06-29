@@ -2,8 +2,11 @@
 
 import { useMemo } from "react";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { nanoid } from "nanoid";
+
+import { localForageStorage } from "@/lib/localforage-storage";
+import { inferModelInfo } from "@/lib/pro-spec/model-inference";
 
 export type ApiCallFormat = "openai" | "gemini";
 
@@ -56,7 +59,7 @@ export type WebdavSyncConfig = {
     lastSyncedAt: string;
 };
 
-export const CONFIG_STORE_KEY = "infinite-canvas:ai_config_store";
+export const CONFIG_STORE_KEY = "fishxlab:ai_config_store";
 export type ModelCapability = "image" | "video" | "text" | "audio";
 const CHANNEL_MODEL_SEPARATOR = "::";
 const OPENAI_BASE_URL = "https://api.openai.com";
@@ -107,11 +110,12 @@ export const defaultWebdavSyncConfig: WebdavSyncConfig = {
     url: "",
     username: "",
     password: "",
-    directory: "infinite-canvas",
+    directory: "fishxlab",
     lastSyncedAt: "",
 };
 
 type ConfigStore = {
+    hydrated: boolean;
     config: AiConfig;
     webdav: WebdavSyncConfig;
     isConfigOpen: boolean;
@@ -125,13 +129,11 @@ type ConfigStore = {
 };
 
 function isVideoModelName(model: string) {
-    const value = modelOptionName(model).toLowerCase();
-    return value.includes("seedance") || value.includes("video") || value.includes("sora") || value.includes("veo") || value.includes("kling") || value.includes("wan") || value.includes("hailuo");
+    return inferModelInfo(modelOptionName(model)).category === "video";
 }
 
 function isImageModelName(model: string) {
-    const value = modelOptionName(model).toLowerCase();
-    return !isVideoModelName(model) && !isAudioModelName(model) && (value.includes("seedream") || value.includes("gpt-image") || value.includes("image") || value.includes("dall-e") || value.includes("dalle") || value.includes("imagen") || value.includes("flux") || value.includes("sdxl") || value.includes("stable-diffusion") || value.includes("midjourney"));
+    return inferModelInfo(modelOptionName(model)).category === "image";
 }
 
 function isAudioModelName(model: string) {
@@ -140,7 +142,7 @@ function isAudioModelName(model: string) {
 }
 
 function isTextModelName(model: string) {
-    return !isImageModelName(model) && !isVideoModelName(model) && !isAudioModelName(model);
+    return !isAudioModelName(model) && inferModelInfo(modelOptionName(model)).category === "chat";
 }
 
 export function modelMatchesCapability(model: string, capability?: ModelCapability) {
@@ -165,13 +167,15 @@ function modelListKey(capability: ModelCapability) {
 }
 
 function isAiConfigReady(config: AiConfig, model: string) {
-    const channel = resolveModelChannel(config, model);
-    return Boolean(model.trim() && channel.baseUrl.trim() && channel.apiKey.trim());
+    const modelValue = resolveConfigModelValue(config, model);
+    const channel = resolveModelChannel(config, modelValue);
+    return Boolean(modelOptionName(modelValue).trim() && channel.baseUrl.trim() && channel.apiKey.trim());
 }
 
 export const useConfigStore = create<ConfigStore>()(
     persist(
         (set, get) => ({
+            hydrated: false,
             config: defaultConfig,
             webdav: defaultWebdavSyncConfig,
             isConfigOpen: false,
@@ -197,6 +201,7 @@ export const useConfigStore = create<ConfigStore>()(
         }),
         {
             name: CONFIG_STORE_KEY,
+            storage: createJSONStorage(() => localForageStorage),
             partialize: (state) => ({ config: state.config, webdav: state.webdav }),
             merge: (persisted, current) => {
                 const persistedState = (persisted || {}) as Partial<ConfigStore>;
@@ -228,12 +233,15 @@ export const useConfigStore = create<ConfigStore>()(
                         videoGenerateAudio: config.videoGenerateAudio || "true",
                         videoWatermark: config.videoWatermark || "false",
                         canvasImageCount: config.canvasImageCount || "3",
-                        imageModels: Array.isArray(persistedConfig.imageModels) ? normalizeModelList(config.imageModels, channels) : filterModelsByCapability(models, "image"),
-                        videoModels: Array.isArray(persistedConfig.videoModels) ? normalizeModelList(config.videoModels, channels) : filterModelsByCapability(models, "video"),
-                        textModels: Array.isArray(persistedConfig.textModels) ? normalizeModelList(config.textModels, channels) : filterModelsByCapability(models, "text"),
-                        audioModels: Array.isArray(persistedConfig.audioModels) ? normalizeModelList(config.audioModels, channels) : filterModelsByCapability(models, "audio"),
+                        imageModels: mergeSuggestedModelOptions(Array.isArray(persistedConfig.imageModels) ? normalizeModelList(config.imageModels, channels) : [], filterModelsByCapability(models, "image")),
+                        videoModels: mergeSuggestedModelOptions(Array.isArray(persistedConfig.videoModels) ? normalizeModelList(config.videoModels, channels) : [], filterModelsByCapability(models, "video")),
+                        textModels: mergeSuggestedModelOptions(Array.isArray(persistedConfig.textModels) ? normalizeModelList(config.textModels, channels) : [], filterModelsByCapability(models, "text")),
+                        audioModels: mergeSuggestedModelOptions(Array.isArray(persistedConfig.audioModels) ? normalizeModelList(config.audioModels, channels) : [], filterModelsByCapability(models, "audio")),
                     },
                 };
+            },
+            onRehydrateStorage: () => () => {
+                useConfigStore.setState({ hydrated: true });
             },
         },
     ),
@@ -244,6 +252,10 @@ function normalizeModelList(models: string[], channels: ModelChannel[]) {
     return Array.from(new Set((models || []).map((model) => model.trim()).filter(Boolean)))
         .map((model) => normalizeModelOptionValue(model, channels))
         .filter((model) => !allModelOptions.length || allModelOptions.includes(model) || !isChannelModelValue(model));
+}
+
+export function mergeSuggestedModelOptions(current: string[], suggested: string[]) {
+    return Array.from(new Set([...(current || []), ...(suggested || [])].map((model) => model.trim()).filter(Boolean)));
 }
 
 export function useEffectiveConfig() {
@@ -285,7 +297,29 @@ export function modelOptionLabel(config: AiConfig, value: string) {
     const decoded = decodeChannelModel(value);
     if (!decoded) return value;
     const channel = config.channels.find((item) => item.id === decoded.channelId);
-    return channel ? `${decoded.model}（${channel.name}）` : decoded.model;
+    return channel ? `${decoded.model}（${modelOptionSourceLabel(config, value)}）` : decoded.model;
+}
+
+export function modelOptionSourceLabel(config: AiConfig, value: string) {
+    const decoded = decodeChannelModel(value);
+    const channel = decoded ? config.channels.find((item) => item.id === decoded.channelId) || config.channels.find((item) => item.models.includes(decoded.model)) : resolveModelChannel(config, value);
+    return channel ? channelSourceLabel(config, channel) : "未绑定渠道";
+}
+
+export function modelOptionSearchText(config: AiConfig, value: string) {
+    return `${modelOptionName(value)} ${modelOptionSourceLabel(config, value)} ${modelOptionLabel(config, value)}`;
+}
+
+export function channelSourceLabel(config: AiConfig, channel: ModelChannel) {
+    const index = config.channels.findIndex((item) => item.id === channel.id);
+    const name = `${channel.name || "未命名渠道"} #${index >= 0 ? index + 1 : "?"}`;
+    return [name, endpointHost(channel.baseUrl), apiKeyFingerprint(channel.apiKey)].filter(Boolean).join(" · ");
+}
+
+export function apiKeyFingerprint(apiKey: string) {
+    const value = apiKey.trim();
+    if (!value) return "未填 Key";
+    return `Key ...${value.slice(-4)}`;
 }
 
 export function modelOptionsFromChannels(channels: ModelChannel[]) {
@@ -298,10 +332,12 @@ export function normalizeModelOptionValue(value: string | undefined, channels: M
     const decoded = decodeChannelModel(model);
     if (decoded) {
         const channel = channels.find((item) => item.id === decoded.channelId);
-        return channel && channel.models.includes(decoded.model) ? model : "";
+        if (channel && channel.models.includes(decoded.model)) return model;
+        const fallbackChannel = channels.find((item) => item.models.includes(decoded.model));
+        return fallbackChannel ? encodeChannelModel(fallbackChannel.id, decoded.model) : "";
     }
-    const channel = channels.find((item) => item.models.includes(decoded?.model || model)) || channels[0];
-    return channel && channel.models.includes(decoded?.model || model) ? encodeChannelModel(channel.id, decoded?.model || model) : model;
+    const channel = channels.find((item) => item.models.includes(model)) || channels[0];
+    return channel && channel.models.includes(model) ? encodeChannelModel(channel.id, model) : model;
 }
 
 export function resolveModelChannel(config: AiConfig, value: string) {
@@ -312,13 +348,54 @@ export function resolveModelChannel(config: AiConfig, value: string) {
 }
 
 export function resolveModelRequestConfig(config: AiConfig, value: string) {
-    const channel = resolveModelChannel(config, value);
+    const modelValue = resolveConfigModelValue(config, value);
+    const channel = resolveModelChannel(config, modelValue);
     return {
         ...config,
-        model: modelOptionName(value || config.model),
+        model: modelOptionName(modelValue),
         baseUrl: channel.baseUrl,
         apiKey: channel.apiKey,
         apiFormat: channel.apiFormat,
+    };
+}
+
+function resolveConfigModelValue(config: AiConfig, value: string | undefined) {
+    const fallback = value || config.model || config.imageModel || config.videoModel || config.textModel || config.audioModel || config.models[0] || "";
+    return normalizeModelOptionValue(fallback, config.channels) || fallback;
+}
+
+export function configWithChannels(config: AiConfig, channels: ModelChannel[]): AiConfig {
+    const normalizedChannels = normalizeModelChannels(channels);
+    const models = modelOptionsFromChannels(normalizedChannels);
+    return {
+        ...config,
+        channelMode: "local",
+        baseUrl: normalizedChannels[0]?.baseUrl || config.baseUrl,
+        apiKey: normalizedChannels[0]?.apiKey || config.apiKey,
+        apiFormat: normalizedChannels[0]?.apiFormat || config.apiFormat,
+        channels: normalizedChannels,
+        models,
+        imageModels: filterModelsByCapability(models, "image"),
+        videoModels: filterModelsByCapability(models, "video"),
+        textModels: filterModelsByCapability(models, "text"),
+        audioModels: filterModelsByCapability(models, "audio"),
+    };
+}
+
+export function configWithQuickConnectChannel(config: AiConfig, channel: ModelChannel): AiConfig {
+    const channels = config.channels.length ? config.channels.map((item, index) => (index === 0 ? channel : item)) : [channel];
+    const next = configWithChannels(config, channels);
+    const firstImage = next.imageModels[0] || "";
+    const firstVideo = next.videoModels[0] || "";
+    const firstText = next.textModels[0] || "";
+    const firstAudio = next.audioModels[0] || "";
+    return {
+        ...next,
+        model: firstImage || firstVideo || firstText || firstAudio || next.models[0] || "",
+        imageModel: firstImage,
+        videoModel: firstVideo,
+        textModel: firstText,
+        audioModel: firstAudio,
     };
 }
 
@@ -351,6 +428,10 @@ function normalizeChannels(config: AiConfig) {
             }),
         );
     }
+    return normalizeModelChannels(channels);
+}
+
+function normalizeModelChannels(channels: ModelChannel[]) {
     return channels.map((channel) => ({ ...channel, models: uniqueRawModels(channel.models) }));
 }
 
@@ -368,6 +449,16 @@ function uniqueRawModels(models: string[]) {
 
 function uniqueModelOptions(models: string[]) {
     return Array.from(new Set((models || []).map((model) => model.trim()).filter(Boolean)));
+}
+
+function endpointHost(baseUrl: string) {
+    const value = baseUrl.trim();
+    if (!value) return "";
+    try {
+        return new URL(value).host;
+    } catch {
+        return value.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    }
 }
 
 export function buildApiUrl(baseUrl: string, path: string) {

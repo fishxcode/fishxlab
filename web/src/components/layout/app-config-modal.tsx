@@ -1,15 +1,18 @@
 "use client";
 
-import { App, Button, Form, Input, Modal, Progress, Segmented, Select, Tabs } from "antd";
-import { CircleAlert, Cloud, Plus, RefreshCw, Trash2, Wifi } from "lucide-react";
+import { App, Button, Checkbox, Form, Input, Modal, Progress, Segmented, Select, Tabs } from "antd";
+import { Cloud, Plus, RefreshCw, Trash2, WandSparkles, Wifi } from "lucide-react";
 import { useState } from "react";
 
 import { ModelPicker } from "@/components/model-picker";
+import { QuickConnectModal } from "@/components/onboarding/quick-connect-modal";
+import { DEFAULT_UPSTREAM } from "@/lib/pro-spec/constants";
+import { fetchFishxapiTokenUsage, formatUsageAmount, summarizeModelCategories, type FishxapiTokenUsage } from "@/lib/pro-spec/fishxapi-usage";
 import { fetchChannelModels } from "@/services/api/image";
 import { syncAppDataToWebdav, type AppSyncDomainKey, type AppSyncProgressEvent } from "@/services/app-sync";
 import { testWebdavConnection, WEBDAV_MANIFEST_FILE_NAME } from "@/services/webdav-sync";
 import { audioFormatOptions, audioVoiceOptions, normalizeAudioSpeedValue } from "@/lib/audio-generation";
-import { createModelChannel, defaultBaseUrlForApiFormat, filterModelsByCapability, modelOptionLabel, modelOptionsFromChannels, normalizeModelOptionValue, useConfigStore, type AiConfig, type ApiCallFormat, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
+import { channelSourceLabel, createModelChannel, defaultBaseUrlForApiFormat, filterModelsByCapability, mergeSuggestedModelOptions, modelOptionLabel, modelOptionSearchText, modelOptionsFromChannels, normalizeModelOptionValue, useConfigStore, type AiConfig, type ApiCallFormat, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
 
 type ModelGroup = {
     capability: ModelCapability;
@@ -25,6 +28,14 @@ type WebdavDomainProgress = {
     current?: number;
     total?: number;
     status?: "active" | "success" | "exception";
+};
+
+type ModelSelectionDraft = {
+    channelId: string;
+    channelName: string;
+    channelSource: string;
+    models: string[];
+    selected: string[];
 };
 
 const modelGroups: ModelGroup[] = [
@@ -63,6 +74,11 @@ export function AppConfigModal() {
     const [loadingChannelId, setLoadingChannelId] = useState("");
     const [testingWebdav, setTestingWebdav] = useState(false);
     const [syncingWebdav, setSyncingWebdav] = useState(false);
+    const [quickConnectOpen, setQuickConnectOpen] = useState(false);
+    const [fishxlabUsage, setFishxapiUsage] = useState<FishxapiTokenUsage | null>(null);
+    const [fishxlabUsageError, setFishxapiUsageError] = useState("");
+    const [loadingFishxapiUsage, setLoadingFishxapiUsage] = useState(false);
+    const [modelSelection, setModelSelection] = useState<ModelSelectionDraft | null>(null);
     const [webdavSyncStatus, setWebdavSyncStatus] = useState("");
     const [webdavDomainProgress, setWebdavDomainProgress] = useState(createWebdavDomainProgress);
     const config = useConfigStore((state) => state.config);
@@ -73,8 +89,10 @@ export function AppConfigModal() {
     const shouldPromptContinue = useConfigStore((state) => state.shouldPromptContinue);
     const setConfigDialogOpen = useConfigStore((state) => state.setConfigDialogOpen);
     const clearPromptContinue = useConfigStore((state) => state.clearPromptContinue);
-    const modelOptions = config.models.map((model) => ({ label: modelOptionLabel(config, model), value: model }));
+    const modelOptions = config.models.map((model) => ({ label: modelOptionLabel(config, model), value: model, searchText: modelOptionSearchText(config, model) }));
     const webdavReady = Boolean(webdav.url.trim());
+    const fishxlabChannel = config.channels[0];
+    const fishxlabModelSummary = summarizeModelCategories(fishxlabChannel?.models || []);
 
     const saveConfig = (nextConfig: AiConfig) => {
         (Object.keys(nextConfig) as Array<keyof AiConfig>).forEach((key) => updateConfig(key, nextConfig[key]));
@@ -103,7 +121,7 @@ export function AppConfigModal() {
     };
 
     const addChannel = () => {
-        updateChannels([...config.channels, createModelChannel({ name: `渠道 ${config.channels.length + 1}` })]);
+        updateChannels([...config.channels, createModelChannel({ name: `渠道 ${config.channels.length + 1}`, baseUrl: `${DEFAULT_UPSTREAM.baseUrl}/`, apiFormat: "openai" })]);
     };
 
     const deleteChannel = (id: string) => {
@@ -122,13 +140,44 @@ export function AppConfigModal() {
         setLoadingChannelId(channel.id);
         try {
             const models = await fetchChannelModels(channel);
-            updateChannels(config.channels.map((item) => (item.id === channel.id ? { ...item, models } : item)));
-            message.success(`${channel.name} 模型列表已更新`);
+            const current = new Set(channel.models);
+            const selected = models.filter((model) => current.has(model));
+            setModelSelection({
+                channelId: channel.id,
+                channelName: channel.name,
+                channelSource: channelSourceLabel(config, channel),
+                models,
+                selected: selected.length ? selected : models,
+            });
+            message.success(`已拉取 ${models.length} 个模型，请选择要保存的模型`);
         } catch (error) {
             message.error(error instanceof Error ? error.message : "读取模型失败");
         } finally {
             setLoadingChannelId("");
         }
+    };
+
+    const confirmModelSelection = () => {
+        if (!modelSelection) return;
+        if (!modelSelection.selected.length) {
+            message.error("请至少选择一个模型");
+            return;
+        }
+        updateChannel(modelSelection.channelId, { models: modelSelection.selected });
+        message.success(`${modelSelection.channelName} 已保存 ${modelSelection.selected.length} 个模型`);
+        setModelSelection(null);
+    };
+
+    const selectAllFetchedModels = () => {
+        setModelSelection((current) => (current ? { ...current, selected: current.models } : current));
+    };
+
+    const invertFetchedModels = () => {
+        setModelSelection((current) => {
+            if (!current) return current;
+            const selected = new Set(current.selected);
+            return { ...current, selected: current.models.filter((model) => !selected.has(model)) };
+        });
     };
 
     const refreshAllModels = async () => {
@@ -147,6 +196,27 @@ export function AppConfigModal() {
             message.error(error instanceof Error ? error.message : "读取模型失败");
         } finally {
             setLoadingChannelId("");
+        }
+    };
+
+    const refreshFishxapiUsage = async () => {
+        const channel = fishxlabChannel;
+        if (!channel?.baseUrl.trim() || !channel.apiKey.trim()) {
+            message.error("请先完成 fishxapi 一键接入或填写主渠道 API Key");
+            return;
+        }
+        setLoadingFishxapiUsage(true);
+        setFishxapiUsageError("");
+        try {
+            const usage = await fetchFishxapiTokenUsage({ baseUrl: channel.baseUrl, apiKey: channel.apiKey });
+            setFishxapiUsage(usage);
+            message.success("fishxapi 额度已更新");
+        } catch (error) {
+            const text = error instanceof Error ? error.message : "额度查询失败";
+            setFishxapiUsageError(text);
+            message.error(text);
+        } finally {
+            setLoadingFishxapiUsage(false);
         }
     };
 
@@ -208,11 +278,12 @@ export function AppConfigModal() {
     };
 
     return (
+        <>
         <Modal
             title={
                 <div>
                     <div className="text-lg font-semibold">配置与用户偏好</div>
-                    <div className="mt-1 text-xs font-normal text-stone-500">渠道聚合、模型选择和同步偏好</div>
+                    <div className="mt-1 text-xs font-normal text-muted-foreground">渠道聚合、模型选择和同步偏好</div>
                 </div>
             }
             open={isConfigOpen}
@@ -235,18 +306,19 @@ export function AppConfigModal() {
                         label: "渠道",
                         children: (
                             <Form layout="vertical" requiredMark={false}>
-                                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-200 p-3 dark:border-stone-800">
+                                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3">
                                     <div className="min-w-0 flex-1">
-                                        <div className="flex w-fit max-w-full flex-wrap items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-100">
-                                            <CircleAlert className="size-3.5 shrink-0" />
-                                            <span className="font-semibold">重要：</span>
+                                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                                             <span>新增或拉取模型后，需要到“模型”Tab 选择可选项才会显示。</span>
-                                            <Button type="link" size="small" className="h-auto p-0 text-xs font-semibold text-amber-900 dark:text-amber-100" onClick={() => setActiveTab("models")}>
+                                            <Button type="link" size="small" className="h-auto p-0 text-xs font-semibold" onClick={() => setActiveTab("models")}>
                                                 去模型设置
                                             </Button>
                                         </div>
                                     </div>
                                     <div className="flex shrink-0 gap-2">
+                                        <Button icon={<WandSparkles className="size-4" />} onClick={() => setQuickConnectOpen(true)}>
+                                            一键接入
+                                        </Button>
                                         <Button icon={<RefreshCw className="size-4" />} loading={Boolean(loadingChannelId)} onClick={() => void refreshAllModels()}>
                                             拉取全部
                                         </Button>
@@ -255,13 +327,32 @@ export function AppConfigModal() {
                                         </Button>
                                     </div>
                                 </div>
+                                <section className="mb-4 rounded-lg border border-border p-3">
+                                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                                        <div>
+                                            <div className="text-sm font-semibold">fishxapi 状态</div>
+                                            <div className="mt-1 text-xs text-muted-foreground">这里只使用 sk- API Key 查询模型与额度，不需要 AccessToken。</div>
+                                        </div>
+                                        <Button size="small" icon={<RefreshCw className="size-3.5" />} loading={loadingFishxapiUsage} onClick={() => void refreshFishxapiUsage()}>
+                                            刷新额度
+                                        </Button>
+                                    </div>
+                                    <div className="grid gap-2 text-sm md:grid-cols-5">
+                                        <StatusItem label="主渠道" value={fishxlabChannel?.name || "未配置"} />
+                                        <StatusItem label="模型" value={`${fishxlabModelSummary.total} 个`} />
+                                        <StatusItem label="图像 / 视频" value={`${fishxlabModelSummary.image} / ${fishxlabModelSummary.video}`} />
+                                        <StatusItem label="剩余额度" value={fishxlabUsage ? (fishxlabUsage.unlimitedQuota ? "无限额度" : formatUsageAmount(fishxlabUsage.totalAvailable)) : "未查询"} />
+                                        <StatusItem label="模型白名单" value={fishxlabUsage ? (fishxlabUsage.modelLimitsEnabled ? `${fishxlabUsage.modelLimits.length} 个` : "未限制") : "未查询"} />
+                                    </div>
+                                    {fishxlabUsageError ? <div className="mt-2 text-xs text-muted-foreground">额度未读取：{fishxlabUsageError}</div> : null}
+                                </section>
                                 <div className="space-y-3">
                                     {config.channels.map((channel) => (
-                                        <section key={channel.id} className="rounded-lg border border-stone-200 p-3 dark:border-stone-800">
+                                        <section key={channel.id} className="rounded-lg border border-border p-3">
                                             <div className="mb-3 flex items-center justify-between gap-3">
                                                 <div className="min-w-0">
                                                     <div className="truncate text-sm font-semibold">{channel.name || "未命名渠道"}</div>
-                                                    <div className="mt-1 text-xs text-stone-500">
+                                                    <div className="mt-1 text-xs text-muted-foreground">
                                                         {apiFormatLabel(channel.apiFormat)} · 已保存 {channel.models.length} 个模型
                                                     </div>
                                                 </div>
@@ -300,21 +391,28 @@ export function AppConfigModal() {
                         label: "模型",
                         children: (
                             <Form layout="vertical" requiredMark={false}>
-                                <div className="mb-4 rounded-lg border border-stone-200 p-3 dark:border-stone-800">
+                                <div className="mb-4 rounded-lg border border-border p-3">
                                     <div className="text-sm font-semibold">默认模型和可选项</div>
-                                    <div className="mt-1 text-xs leading-5 text-stone-500">可选项决定各处下拉框展示哪些模型；同名模型会以括号里的渠道名区分。</div>
+                                    <div className="mt-1 text-xs leading-5 text-muted-foreground">可选项决定各处下拉框展示哪些模型；同名模型会显示渠道序号、Base URL 和 Key 后四位，选择后会精确使用对应 API Key。</div>
+                                    <div className="mt-1 text-xs leading-5 text-muted-foreground">搜索支持模型名、渠道名、域名和 Key 后四位；这里不能手动输入裸模型名，需要先在“渠道”里添加或拉取模型。</div>
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-2">
                                     {modelGroups.map((group) => (
                                         <Form.Item key={group.modelsKey} label={group.optionsLabel} className="mb-0">
                                             <Select
-                                                mode="tags"
+                                                mode="multiple"
                                                 showSearch
                                                 allowClear
                                                 maxTagCount="responsive"
-                                                placeholder={config.models.length ? `请选择或输入${group.optionsLabel}` : "先到渠道里填写或拉取模型"}
+                                                placeholder={config.models.length ? `请选择${group.optionsLabel}` : "先到渠道里填写或拉取模型"}
                                                 value={config[group.modelsKey]}
                                                 options={modelOptions}
+                                                optionFilterProp="searchText"
+                                                filterOption={(input, option) => {
+                                                    const data = option as { searchText?: unknown; label?: unknown; value?: unknown } | undefined;
+                                                    const text = String(data?.searchText ?? data?.label ?? data?.value ?? "").toLowerCase();
+                                                    return text.includes(input.trim().toLowerCase());
+                                                }}
                                                 onChange={(models) => updateCapabilityModels(group, models)}
                                             />
                                         </Form.Item>
@@ -378,16 +476,16 @@ export function AppConfigModal() {
                         label: "WebDAV",
                         children: (
                             <Form layout="vertical" requiredMark={false}>
-                                <section className="rounded-lg border border-stone-200 p-3 dark:border-stone-800">
+                                <section className="rounded-lg border border-border p-3">
                                     <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                                         <div>
                                             <div className="flex items-center gap-2 text-sm font-semibold">
                                                 <Cloud className="size-4" />
                                                 WebDAV 同步
                                             </div>
-                                            <div className="mt-1 text-xs text-stone-500">同步画布、我的素材、生成记录和本地媒体文件，不包含 AI API Key；服务不支持 CORS 时可走 Next.js 转发。</div>
+                                            <div className="mt-1 text-xs text-muted-foreground">同步画布、我的素材、生成记录和本地媒体文件，不包含 AI API Key；服务不支持 CORS 时可走 Next.js 转发。</div>
                                         </div>
-                                        <div className="text-xs text-stone-500">{webdav.lastSyncedAt ? `上次同步 ${formatWebdavTime(webdav.lastSyncedAt)}` : "尚未同步"}</div>
+                                        <div className="text-xs text-muted-foreground">{webdav.lastSyncedAt ? `上次同步 ${formatWebdavTime(webdav.lastSyncedAt)}` : "尚未同步"}</div>
                                     </div>
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <Form.Item label="连接方式" className="mb-4 md:col-span-2">
@@ -405,7 +503,7 @@ export function AppConfigModal() {
                                             <Input value={webdav.url} placeholder="https://nas.example.com/webdav" onChange={(event) => updateWebdavConfig("url", event.target.value)} />
                                         </Form.Item>
                                         <Form.Item label="远程目录" extra={`会在该目录下分业务目录保存，每个目录包含 ${WEBDAV_MANIFEST_FILE_NAME} 和 files/`} className="mb-4">
-                                            <Input value={webdav.directory} placeholder="infinite-canvas" onChange={(event) => updateWebdavConfig("directory", event.target.value)} />
+                                            <Input value={webdav.directory} placeholder="fishxlab" onChange={(event) => updateWebdavConfig("directory", event.target.value)} />
                                         </Form.Item>
                                         <Form.Item label="用户名" className="mb-0">
                                             <Input value={webdav.username} autoComplete="username" onChange={(event) => updateWebdavConfig("username", event.target.value)} />
@@ -421,7 +519,7 @@ export function AppConfigModal() {
                                         <Button type="primary" icon={<RefreshCw className="size-4" />} disabled={!webdavReady || testingWebdav} loading={syncingWebdav} onClick={() => void syncWebdav()}>
                                             {syncingWebdav ? "同步中" : "立即同步"}
                                         </Button>
-                                        {webdavSyncStatus ? <span className="text-xs text-stone-500">{webdavSyncStatus}</span> : null}
+                                        {webdavSyncStatus ? <span className="text-xs text-muted-foreground">{webdavSyncStatus}</span> : null}
                                     </div>
                                     {syncingWebdav || webdavSyncStatus ? <WebdavProgressGrid progress={webdavDomainProgress} /> : null}
                                 </section>
@@ -431,6 +529,48 @@ export function AppConfigModal() {
                 ]}
             />
         </Modal>
+        <QuickConnectModal open={quickConnectOpen} onClose={() => setQuickConnectOpen(false)} />
+        <Modal
+            title="选择要保存的模型"
+            open={Boolean(modelSelection)}
+            width={820}
+            centered
+            onCancel={() => setModelSelection(null)}
+            onOk={confirmModelSelection}
+            okText="保存选择"
+            cancelText="取消"
+            styles={{ body: { maxHeight: "64vh", overflowY: "auto", paddingRight: 8 } }}
+        >
+            {modelSelection ? (
+                <div>
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <div className="text-sm text-muted-foreground">
+                            {modelSelection.channelSource} · 已选择 {modelSelection.selected.length} / {modelSelection.models.length} 个模型
+                        </div>
+                        <div className="flex gap-2">
+                            <Button size="small" onClick={selectAllFetchedModels}>
+                                全选
+                            </Button>
+                            <Button size="small" onClick={invertFetchedModels}>
+                                反选
+                            </Button>
+                        </div>
+                    </div>
+                    <Checkbox.Group
+                        className="grid w-full gap-2 md:grid-cols-2"
+                        value={modelSelection.selected}
+                        onChange={(values) => setModelSelection((current) => (current ? { ...current, selected: values.map(String) } : current))}
+                    >
+                        {modelSelection.models.map((model) => (
+                            <Checkbox key={model} value={model} className="min-w-0 rounded-md border border-border px-2 py-1.5">
+                                <span className="block min-w-0 truncate">{model}</span>
+                            </Checkbox>
+                        ))}
+                    </Checkbox.Group>
+                </div>
+            ) : null}
+        </Modal>
+        </>
     );
 }
 
@@ -461,7 +601,7 @@ function withChannels(config: AiConfig, channels: ModelChannel[]): AiConfig {
 function keepOrSuggest(current: string[], suggested: string[], allModels: string[]) {
     const available = new Set(allModels);
     const kept = uniqueModels(current).filter((model) => available.has(model));
-    return kept.length ? kept : suggested;
+    return mergeSuggestedModelOptions(kept, suggested);
 }
 
 function normalizeDefaultModel(value: string, options: string[]) {
@@ -481,6 +621,15 @@ function apiFormatLabel(apiFormat: ApiCallFormat) {
     return apiFormat === "gemini" ? "Gemini" : "OpenAI";
 }
 
+function StatusItem({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="min-w-0 rounded-md border border-border px-3 py-2">
+            <div className="text-xs text-muted-foreground">{label}</div>
+            <div className="mt-1 truncate font-medium">{value}</div>
+        </div>
+    );
+}
+
 function formatWebdavTime(value: string) {
     return new Date(value).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
@@ -492,10 +641,10 @@ function WebdavProgressGrid({ progress }: { progress: Record<AppSyncDomainKey, W
                 const item = progress[key];
                 const count = item.total ? `${item.current || 0}/${item.total}` : "";
                 return (
-                    <div key={key} className="rounded-md border border-stone-200 px-3 py-2 dark:border-stone-800">
+                    <div key={key} className="rounded-md border border-border px-3 py-2">
                         <div className="mb-1 flex min-w-0 items-center justify-between gap-3 text-xs">
-                            <span className="shrink-0 font-medium text-stone-700 dark:text-stone-200">{item.label}</span>
-                            <span className="min-w-0 truncate text-right text-stone-500">
+                            <span className="shrink-0 font-medium text-foreground">{item.label}</span>
+                            <span className="min-w-0 truncate text-right text-muted-foreground">
                                 {item.stage}
                                 {count ? ` · ${count}` : ""}
                             </span>

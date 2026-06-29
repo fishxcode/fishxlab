@@ -55,12 +55,13 @@ export const CanvasResourceMentionTextarea = forwardRef<HTMLTextAreaElement, Pro
 
     const syncMention = (nextValue: string, cursor: number) => {
         const prefix = nextValue.slice(0, cursor);
-        const match = /(^|\s)@([^\s@]*)$/.exec(prefix);
+        // 不限制 @ 前缀（行首/空白），任意位置打 @ 都能触发，避免输入文字后无法 @ 引用素材。
+        const match = /@([^\s@]*)$/.exec(prefix);
         if (!match || !references.some((item) => item.active)) {
             closeMention();
             return;
         }
-        setMention({ start: cursor - match[2].length - 1, query: match[2] });
+        setMention({ start: cursor - match[1].length - 1, query: match[1] });
         setActiveIndex(0);
     };
 

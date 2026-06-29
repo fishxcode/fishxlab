@@ -5,6 +5,9 @@ import { nanoid } from "nanoid";
 import { dataUrlToFile } from "@/lib/image-utils";
 import { buildImageReferencePromptText } from "@/lib/image-reference-prompt";
 import { imageToDataUrl } from "@/services/image-storage";
+import { inferModelInfo } from "@/lib/pro-spec/model-inference";
+import { buildRequest } from "@/lib/pro-spec/provider-adapter";
+import type { ImageModelParams } from "@/lib/pro-spec/types";
 import type { ReferenceImage } from "@/types/image";
 
 export type AiTextMessage = {
@@ -178,6 +181,24 @@ function resolveRequestSize(quality: string | undefined, size: string) {
     }
     if (value.includes(":")) return resolveSize(quality, value);
     throw new Error("图像尺寸格式不支持，请使用 auto、9:16 或 1024x1024");
+}
+
+function imageModelParamsFromConfig(config: AiConfig, count: number): ImageModelParams {
+    const size = (config.size || "").trim();
+    const quality = (config.quality || "").trim();
+    const grokImagine = /grok-imagine/i.test(config.model || config.imageModel);
+    const normalizedQuality = normalizeImageModelParamQuality(grokImagine ? (quality === "low" ? "1k" : "2k") : quality);
+    return {
+        sampleCount: count,
+        ...(size && size !== "auto" && size.includes(":") ? { aspectRatio: size } : {}),
+        ...(size && size !== "auto" && !size.includes(":") ? { size } : {}),
+        ...(normalizedQuality ? { quality: normalizedQuality } : {}),
+    };
+}
+
+function normalizeImageModelParamQuality(value: string): ImageModelParams["quality"] | undefined {
+    if (value === "standard" || value === "hd" || value === "high" || value === "medium" || value === "low" || value === "1k" || value === "2k") return value;
+    return undefined;
 }
 
 function resolveImageDataUrl(item: Record<string, unknown>) {
@@ -377,8 +398,9 @@ function consumeResponseStreamText(state: ResponseStreamState, text: string, onD
     for (;;) {
         const match = state.buffer.match(/\r?\n\r?\n/);
         if (!match) break;
-        consumeResponseStreamBlock(state.buffer.slice(0, match.index), state, onDelta);
-        state.buffer = state.buffer.slice(match.index + match[0].length);
+        const index = match.index ?? 0;
+        consumeResponseStreamBlock(state.buffer.slice(0, index), state, onDelta);
+        state.buffer = state.buffer.slice(index + match[0].length);
     }
     if (flush && state.buffer.trim()) {
         consumeResponseStreamBlock(state.buffer, state, onDelta);
@@ -525,8 +547,9 @@ function consumeGeminiStreamText(state: GeminiStreamState, text: string, onDelta
     for (;;) {
         const match = state.buffer.match(/\r?\n\r?\n/);
         if (!match) break;
-        consumeGeminiStreamBlock(state.buffer.slice(0, match.index), state, onDelta);
-        state.buffer = state.buffer.slice(match.index + match[0].length);
+        const index = match.index ?? 0;
+        consumeGeminiStreamBlock(state.buffer.slice(0, index), state, onDelta);
+        state.buffer = state.buffer.slice(index + match[0].length);
     }
     if (flush && state.buffer.trim()) {
         consumeGeminiStreamBlock(state.buffer, state, onDelta);
@@ -617,6 +640,25 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
             throw new Error(readAxiosError(error, "请求失败"));
         }
     }
+    if (inferModelInfo(requestConfig.model).apiFormat === "dalle") {
+        try {
+            const providerRequest = buildRequest({
+                modelId: requestConfig.model,
+                prompt: withSystemPrompt(requestConfig, prompt),
+                modelParams: imageModelParamsFromConfig(requestConfig, n),
+                baseUrl: requestConfig.baseUrl,
+                apiKey: requestConfig.apiKey,
+            });
+            const response = await fetch(providerRequest.url, { ...providerRequest.init, signal: options?.signal });
+            const parsed = await providerRequest.parseResponse(response);
+            if (parsed.error) throw new Error(parsed.error);
+            const resources = parsed.resources || (parsed.resourceUrl ? [parsed.resourceUrl] : []);
+            if (!resources.length) throw new Error("接口没有返回图片");
+            return resources.map((dataUrl) => ({ id: nanoid(), dataUrl }));
+        } catch (error) {
+            throw new Error(readAxiosError(error, "请求失败"));
+        }
+    }
     const quality = normalizeQuality(config.quality);
     const requestSize = resolveRequestSize(quality, config.size);
     try {
@@ -628,7 +670,6 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
                 n,
                 ...(quality ? { quality } : {}),
                 ...(requestSize ? { size: requestSize } : {}),
-                response_format: "b64_json",
                 output_format: IMAGE_OUTPUT_FORMAT,
             },
             {
@@ -655,13 +696,54 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
             throw new Error(readAxiosError(error, "请求失败"));
         }
     }
+    if (inferModelInfo(requestConfig.model).apiFormat === "dalle") {
+        if (/^agnes-image/i.test(requestConfig.model)) {
+            try {
+                const refDataUrl = await imageToDataUrl(references[0]);
+                const response = await axios.post<ImageApiResponse>(
+                    aiApiUrl(requestConfig, "/images/generations"),
+                    {
+                        model: requestConfig.model,
+                        prompt: withSystemPrompt(requestConfig, requestPrompt),
+                        n,
+                        image: refDataUrl,
+                    },
+                    { headers: aiHeaders(requestConfig, "application/json"), signal: options?.signal },
+                );
+                return parseImagePayload(response.data);
+            } catch (error) {
+                throw new Error(readAxiosError(error, "请求失败"));
+            }
+        }
+        try {
+            const files = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
+            const maskFile = mask ? dataUrlToFile({ ...mask, dataUrl: await imageToDataUrl(mask) }) : undefined;
+            const providerRequest = buildRequest({
+                operation: "edit",
+                modelId: requestConfig.model,
+                prompt: withSystemPrompt(requestConfig, requestPrompt),
+                imageFiles: files,
+                mask: maskFile,
+                modelParams: imageModelParamsFromConfig(requestConfig, n),
+                baseUrl: requestConfig.baseUrl,
+                apiKey: requestConfig.apiKey,
+            });
+            const response = await fetch(providerRequest.url, { ...providerRequest.init, signal: options?.signal });
+            const parsed = await providerRequest.parseResponse(response);
+            if (parsed.error) throw new Error(parsed.error);
+            const resources = parsed.resources || (parsed.resourceUrl ? [parsed.resourceUrl] : []);
+            if (!resources.length) throw new Error("接口没有返回图片");
+            return resources.map((dataUrl) => ({ id: nanoid(), dataUrl }));
+        } catch (error) {
+            throw new Error(readAxiosError(error, "请求失败"));
+        }
+    }
     const quality = normalizeQuality(config.quality);
     const requestSize = resolveRequestSize(quality, config.size);
     const formData = new FormData();
     formData.set("model", requestConfig.model);
     formData.set("prompt", withSystemPrompt(requestConfig, requestPrompt));
     formData.set("n", String(n));
-    formData.set("response_format", "b64_json");
     formData.set("output_format", IMAGE_OUTPUT_FORMAT);
     if (quality) {
         formData.set("quality", quality);
@@ -670,7 +752,9 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
         formData.set("size", requestSize);
     }
     const files = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
-    files.forEach((file) => formData.append("image", file));
+    // 多图走 OpenAI 数组字段 image[]，单图保持 image（避免 newapi 网关多图按非数组解析返回 422）。
+    const imageField = files.length > 1 ? "image[]" : "image";
+    files.forEach((file) => formData.append(imageField, file));
     if (mask) formData.set("mask", dataUrlToFile(mask));
 
     try {
