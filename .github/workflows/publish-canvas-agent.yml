@@ -19,6 +19,8 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     defaults:
       run:
         working-directory: canvas-agent
@@ -49,11 +51,11 @@ jobs:
           fi
 
       - name: Publish to npm
-        if: steps.package.outputs.should_publish == 'true'
+        if: steps.package.outputs.should_publish == 'true' && env.NPM_TOKEN != ''
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Skip existing version
-        if: steps.package.outputs.should_publish != 'true'
-        run: echo "${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }} already exists on npm, skipping publish."
+      - name: Skip publish
+        if: steps.package.outputs.should_publish != 'true' || env.NPM_TOKEN == ''
+        run: echo "Skipping npm publish for ${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }} (version already exists or NPM_TOKEN not configured)."
