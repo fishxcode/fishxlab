@@ -844,13 +844,13 @@ export function normalizeBaseUrl(url: string): string {
 }
 
 /**
- * 默认上游（fishxapi）接入信息
+ * 默认上游（ProAPI）接入信息
  * - 使用场景：QuickConnect 向导、上游配置表单默认值
  */
 export const DEFAULT_UPSTREAM = {
-  name: 'fishxapi',
-  baseUrl: 'https://api.fishxcode.com',
-  signUpUrl: 'https://api.fishxcode.com/sign-up',
+  name: 'ProAPI',
+  baseUrl: 'https://newapi.prorisehub.com',
+  signUpUrl: 'https://newapi.prorisehub.com/sign-up',
 } as const
 
 // ==================== 开发者模式 ====================

@@ -9,3 +9,4 @@ data/
 .DS_Store
 .idea
 .workflow/
+web/dist

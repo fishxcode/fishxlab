@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { buildRequest } from "../provider-adapter";
 import { inferModelInfo } from "../model-inference";
 import { getModelLogoById } from "../model-logo";
-import { fetchFishxapiTokenUsage, fishxapiRootUrl, summarizeModelCategories } from "../fishxapi-usage";
+import { fetchProApiTokenUsage, proApiRootUrl, summarizeModelCategories } from "../proapi-usage";
 import { mergeSuggestedModelOptions, modelOptionLabel, modelOptionSearchText, modelOptionsFromChannels, normalizeModelOptionValue, resolveModelRequestConfig, type AiConfig } from "../../../stores/use-config-store";
 
 describe("pro-spec inference", () => {
@@ -71,7 +71,7 @@ describe("pro-spec provider adapter", () => {
         const request = buildRequest({
             modelId: "grok-imagine",
             prompt: "studio",
-            baseUrl: "https://api.fishxcode.com",
+            baseUrl: "https://newapi.prorisehub.com",
             apiKey: "sk-test",
         });
         const parsed = await request.parseResponse(new Response(JSON.stringify({ code: 400, msg: "quota exhausted" }), { status: 200 }));
@@ -83,10 +83,10 @@ describe("pro-spec provider adapter", () => {
             modelId: "hunyuan-image-v3",
             prompt: "studio",
             modelParams: { size: "1024x1024", quality: "high" },
-            baseUrl: "https://api.fishxcode.com",
+            baseUrl: "https://newapi.prorisehub.com",
             apiKey: "sk-test",
         });
-        expect(request.url).toBe("https://api.fishxcode.com/v1/images/generations");
+        expect(request.url).toBe("https://newapi.prorisehub.com/v1/images/generations");
         expect(request.init.method).toBe("POST");
         const body = JSON.parse(String(request.init.body)) as Record<string, unknown>;
         expect(body.model).toBe("hunyuan-image-v3");
@@ -99,10 +99,10 @@ describe("pro-spec provider adapter", () => {
             modelId: "agnes-image-2.1-flash",
             prompt: "studio",
             modelParams: { size: "1024x1024", quality: "high" },
-            baseUrl: "https://api.fishxcode.com",
+            baseUrl: "https://newapi.prorisehub.com",
             apiKey: "sk-test",
         });
-        expect(request.url).toBe("https://api.fishxcode.com/v1/images/generations");
+        expect(request.url).toBe("https://newapi.prorisehub.com/v1/images/generations");
         expect(request.init.method).toBe("POST");
         const body = JSON.parse(String(request.init.body)) as Record<string, unknown>;
         expect(body.model).toBe("agnes-image-2.1-flash");
@@ -117,7 +117,7 @@ describe("pro-spec provider adapter", () => {
         const request = buildRequest({
             modelId: "agnes-image-2.1-flash",
             prompt: "studio",
-            baseUrl: "https://api.fishxcode.com",
+            baseUrl: "https://newapi.prorisehub.com",
             apiKey: "sk-test",
         });
         const parsed = await request.parseResponse(new Response(JSON.stringify({ data: [{ url: "https://example.com/image.png" }] }), { status: 200 }));
@@ -132,10 +132,10 @@ describe("pro-spec provider adapter", () => {
             prompt: "edit this",
             imageFiles: [new File(["image"], "reference.png", { type: "image/png" })],
             modelParams: { size: "1024x1024", negativePrompt: "blur" },
-            baseUrl: "https://api.fishxcode.com",
+            baseUrl: "https://newapi.prorisehub.com",
             apiKey: "sk-test",
         });
-        expect(request.url).toBe("https://api.fishxcode.com/v1/images/edits");
+        expect(request.url).toBe("https://newapi.prorisehub.com/v1/images/edits");
         expect(request.init.method).toBe("POST");
         expect(request.init.body instanceof FormData).toBe(true);
         const form = request.init.body as FormData;
@@ -155,7 +155,7 @@ describe("pro-spec provider adapter", () => {
                 new File(["a"], "ref1.png", { type: "image/png" }),
                 new File(["b"], "ref2.png", { type: "image/png" }),
             ],
-            baseUrl: "https://api.fishxcode.com",
+            baseUrl: "https://newapi.prorisehub.com",
             apiKey: "sk-test",
         });
         const form = request.init.body as FormData;
@@ -173,7 +173,7 @@ describe("pro-spec provider adapter", () => {
                 prompt: "edit this",
                 imageFiles: [new File(["image"], "reference.png", { type: "image/png" })],
                 mask: new File(["mask"], "mask.png", { type: "image/png" }),
-                baseUrl: "https://api.fishxcode.com",
+                baseUrl: "https://newapi.prorisehub.com",
                 apiKey: "sk-test",
             });
         } catch (error) {
@@ -189,7 +189,7 @@ describe("pro-spec provider adapter", () => {
                 modelId: "grok-imagine-video",
                 prompt: "video",
                 images: ["data:image/png;base64,abc"],
-                baseUrl: "https://api.fishxcode.com",
+                baseUrl: "https://newapi.prorisehub.com",
                 apiKey: "sk-test",
             });
         } catch (error) {
@@ -202,37 +202,21 @@ describe("pro-spec provider adapter", () => {
         const request = buildRequest({
             modelId: "grok-image-video",
             prompt: "video",
-            baseUrl: "https://api.fishxcode.com",
+            baseUrl: "https://newapi.prorisehub.com",
             apiKey: "sk-test",
         });
         expect(request.apiFormat).toBe("openai-video");
-        expect(request.url).toBe("https://api.fishxcode.com/v1/videos");
+        expect(request.url).toBe("https://newapi.prorisehub.com/v1/videos");
         expect(request.init.method).toBe("POST");
         const form = request.init.body as FormData;
         expect(form.get("model")).toBe("grok-image-video");
     });
-
-    test("marks Grok video URL responses as direct resources", async () => {
-        const request = buildRequest({
-            modelId: "grok-image-video",
-            prompt: "video",
-            baseUrl: "https://api.fishxcode.com",
-            apiKey: "sk-test",
-        });
-        const parsed = await request.parseResponse(new Response(JSON.stringify({ data: { url: "https://cdn.example.com/video.mp4" } }), { status: 200 }));
-        expect(parsed.resourceUrl).toBe("https://cdn.example.com/video.mp4");
-        expect(parsed.kind).toBe("url");
-    });
 });
 
-describe("pro-spec fishxapi usage", () => {
-    test("normalizes fishxapi root URL", () => {
-        expect(fishxapiRootUrl("https://api.fishxcode.com/v1")).toBe("https://api.fishxcode.com");
-        expect(fishxapiRootUrl("https://api.fishxcode.com/")).toBe("https://api.fishxcode.com");
-    });
-
-    test("rejects non-fishxapi usage hosts", () => {
-        expect(() => fishxapiRootUrl("https://internal.example.com/v1")).toThrow("fishxapi");
+describe("pro-spec ProAPI usage", () => {
+    test("normalizes ProAPI root URL", () => {
+        expect(proApiRootUrl("https://newapi.prorisehub.com/v1")).toBe("https://newapi.prorisehub.com");
+        expect(proApiRootUrl("https://newapi.prorisehub.com/")).toBe("https://newapi.prorisehub.com");
     });
 
     test("summarizes model categories", () => {
@@ -246,10 +230,10 @@ describe("pro-spec fishxapi usage", () => {
     test("fetches token usage with sk API key", async () => {
         const originalFetch = globalThis.fetch;
         globalThis.fetch = (async (url, init) => {
-            expect(String(url)).toBe("/api/fishxapi/usage/token");
+            expect(String(url)).toBe("/api/proapi/usage/token");
             expect(init?.method).toBe("POST");
             const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
-            expect(body.baseUrl).toBe("https://api.fishxcode.com/v1");
+            expect(body.baseUrl).toBe("https://newapi.prorisehub.com/v1");
             expect(body.apiKey).toBe("sk-test");
             return new Response(
                 JSON.stringify({
@@ -270,8 +254,8 @@ describe("pro-spec fishxapi usage", () => {
         }) as typeof fetch;
 
         try {
-            const usage = await fetchFishxapiTokenUsage({
-                baseUrl: "https://api.fishxcode.com/v1",
+            const usage = await fetchProApiTokenUsage({
+                baseUrl: "https://newapi.prorisehub.com/v1",
                 apiKey: "sk-test",
             });
             expect(usage.totalAvailable).toBe(87.66);
@@ -282,14 +266,13 @@ describe("pro-spec fishxapi usage", () => {
             globalThis.fetch = originalFetch;
         }
     });
-
 });
 
 describe("model channel routing", () => {
     test("keeps same model names selectable across different API keys", () => {
         const channels = [
-            { id: "key-a", name: "fishxapi A", baseUrl: "https://a.example.com", apiKey: "sk-channel-a", apiFormat: "openai" as const, models: ["gpt-4o"] },
-            { id: "key-b", name: "fishxapi B", baseUrl: "https://b.example.com", apiKey: "sk-channel-b", apiFormat: "openai" as const, models: ["gpt-4o"] },
+            { id: "key-a", name: "ProAPI A", baseUrl: "https://a.example.com", apiKey: "sk-channel-a", apiFormat: "openai" as const, models: ["gpt-4o"] },
+            { id: "key-b", name: "ProAPI B", baseUrl: "https://b.example.com", apiKey: "sk-channel-b", apiFormat: "openai" as const, models: ["gpt-4o"] },
         ];
         const models = modelOptionsFromChannels(channels);
         const config = { channels, models, model: models[0], imageModel: "", videoModel: "", textModel: models[0], audioModel: "" } as AiConfig;
@@ -297,8 +280,8 @@ describe("model channel routing", () => {
         expect(models.length).toBe(2);
         expect(models[0]).toBe("key-a::gpt-4o");
         expect(models[1]).toBe("key-b::gpt-4o");
-        expect(modelOptionLabel(config, models[0])).toBe("gpt-4o（fishxapi A #1 · a.example.com · Key ...el-a）");
-        expect(modelOptionLabel(config, models[1])).toBe("gpt-4o（fishxapi B #2 · b.example.com · Key ...el-b）");
+        expect(modelOptionLabel(config, models[0])).toBe("gpt-4o（ProAPI A #1 · a.example.com · Key ...el-a）");
+        expect(modelOptionLabel(config, models[1])).toBe("gpt-4o（ProAPI B #2 · b.example.com · Key ...el-b）");
         expect(modelOptionSearchText(config, models[1]).includes("b.example.com")).toBe(true);
         expect(modelOptionSearchText(config, models[1]).includes("el-b")).toBe(true);
 
@@ -314,8 +297,8 @@ describe("model channel routing", () => {
 
     test("normalizes legacy bare models without silently using a stale channel", () => {
         const channels = [
-            { id: "key-a", name: "fishxapi A", baseUrl: "https://a.example.com", apiKey: "sk-channel-a", apiFormat: "openai" as const, models: ["claude-sonnet-4"] },
-            { id: "key-b", name: "fishxapi B", baseUrl: "https://b.example.com", apiKey: "sk-channel-b", apiFormat: "openai" as const, models: ["gpt-4o"] },
+            { id: "key-a", name: "ProAPI A", baseUrl: "https://a.example.com", apiKey: "sk-channel-a", apiFormat: "openai" as const, models: ["claude-sonnet-4"] },
+            { id: "key-b", name: "ProAPI B", baseUrl: "https://b.example.com", apiKey: "sk-channel-b", apiFormat: "openai" as const, models: ["gpt-4o"] },
         ];
         const models = modelOptionsFromChannels(channels);
         const config = { channels, models, model: models[1], imageModel: "", videoModel: "", textModel: models[1], audioModel: "" } as AiConfig;

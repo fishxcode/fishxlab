@@ -10,7 +10,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE_NAME: ghcr.io/fishxcode/fishxlab
+  IMAGE_NAME: ghcr.io/proapi-hub/prolab
 
 jobs:
   build:
@@ -41,8 +41,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=fishxlab
-          cache-to: type=gha,mode=max,scope=fishxlab
+          cache-from: type=gha,scope=prolab
+          cache-to: type=gha,mode=max,scope=prolab
 
   deploy:
     needs: build
@@ -62,8 +62,8 @@ jobs:
           script: |
             set -e
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-            trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
-            cd /opt/fishxlab
+            cd /opt/prolab
             docker compose pull
             docker compose up -d
+            docker logout ghcr.io
             docker image prune -f

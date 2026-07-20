@@ -1,5 +1,3 @@
-"use client";
-
 import { useMemo } from "react";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -51,15 +49,15 @@ export type AiConfig = {
 };
 
 export type WebdavSyncConfig = {
-    proxyMode: "direct" | "nextjs";
     url: string;
     username: string;
     password: string;
     directory: string;
     lastSyncedAt: string;
 };
+export type ConfigTabKey = "channels" | "models" | "preferences" | "webdav" | "codex";
 
-export const CONFIG_STORE_KEY = "fishxlab:ai_config_store";
+export const CONFIG_STORE_KEY = "prolab:ai_config_store";
 export type ModelCapability = "image" | "video" | "text" | "audio";
 const CHANNEL_MODEL_SEPARATOR = "::";
 const OPENAI_BASE_URL = "https://api.openai.com";
@@ -106,11 +104,10 @@ export const defaultConfig: AiConfig = {
 };
 
 export const defaultWebdavSyncConfig: WebdavSyncConfig = {
-    proxyMode: "direct",
     url: "",
     username: "",
     password: "",
-    directory: "fishxlab",
+    directory: "prolab",
     lastSyncedAt: "",
 };
 
@@ -119,11 +116,12 @@ type ConfigStore = {
     config: AiConfig;
     webdav: WebdavSyncConfig;
     isConfigOpen: boolean;
+    configTab: ConfigTabKey;
     shouldPromptContinue: boolean;
     updateConfig: <K extends keyof AiConfig>(key: K, value: AiConfig[K]) => void;
     updateWebdavConfig: <K extends keyof WebdavSyncConfig>(key: K, value: WebdavSyncConfig[K]) => void;
     isAiConfigReady: (config: AiConfig, model: string) => boolean;
-    openConfigDialog: (shouldPromptContinue?: boolean) => void;
+    openConfigDialog: (shouldPromptContinue?: boolean, tab?: ConfigTabKey) => void;
     setConfigDialogOpen: (isOpen: boolean) => void;
     clearPromptContinue: () => void;
 };
@@ -179,6 +177,7 @@ export const useConfigStore = create<ConfigStore>()(
             config: defaultConfig,
             webdav: defaultWebdavSyncConfig,
             isConfigOpen: false,
+            configTab: "channels",
             shouldPromptContinue: false,
             updateConfig: (key, value) =>
                 set((state) => ({
@@ -195,7 +194,7 @@ export const useConfigStore = create<ConfigStore>()(
                     },
                 })),
             isAiConfigReady: (config, model) => isAiConfigReady(config, model),
-            openConfigDialog: (shouldPromptContinue = false) => set({ isConfigOpen: true, shouldPromptContinue }),
+            openConfigDialog: (shouldPromptContinue = false, configTab = "channels") => set({ isConfigOpen: true, shouldPromptContinue, configTab }),
             setConfigDialogOpen: (isConfigOpen) => set({ isConfigOpen }),
             clearPromptContinue: () => set({ shouldPromptContinue: false }),
         }),

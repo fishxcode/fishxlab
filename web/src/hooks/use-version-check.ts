@@ -3,15 +3,11 @@ import { App } from "antd";
 import { APP_VERSION } from "@/constant/env";
 import { parseChangelog, type ReleaseInfo } from "@/lib/release";
 
-const latestVersionUrl = "https://raw.githubusercontent.com/fishxcode/fishxlab/main/VERSION";
-const latestChangelogUrl = "https://raw.githubusercontent.com/fishxcode/fishxlab/main/CHANGELOG.md";
+const latestVersionUrl = "https://raw.githubusercontent.com/proapi-hub/prolab/main/VERSION";
+const latestChangelogUrl = "https://raw.githubusercontent.com/proapi-hub/prolab/main/CHANGELOG.md";
 
 function readLocalReleases(): ReleaseInfo[] {
-    try {
-        return JSON.parse(process.env.NEXT_PUBLIC_APP_RELEASES || "[]");
-    } catch {
-        return [];
-    }
+    return __APP_RELEASES__ || [];
 }
 
 function toVersionParts(version: string) {

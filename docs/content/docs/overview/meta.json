@@ -4,10 +4,12 @@
   "defaultOpen": true,
   "pages": [
     "quick-start",
+    "codex-app-plugin",
     "features",
     "render",
     "docker",
     "third-party-prompt-repositories",
-    "[在线体验](https://fishxlab.fishxcode.com/)"
+    "[在线体验](https://prolab.prorisehub.com/)",
+    "local-codex-canvas"
   ]
 }

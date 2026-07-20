@@ -1,5 +1,3 @@
-"use client";
-
 import localforage from "localforage";
 
 import { nanoid } from "nanoid";
@@ -14,7 +12,7 @@ export type UploadedImage = {
     mimeType: string;
 };
 
-const store = localforage.createInstance({ name: "fishxlab", storeName: "image_files" });
+const store = localforage.createInstance({ name: "prolab", storeName: "image_files" });
 const objectUrls = new Map<string, string>();
 
 export async function uploadImage(input: string | Blob): Promise<UploadedImage> {

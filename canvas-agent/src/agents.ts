@@ -35,8 +35,16 @@ async function runCodexTurnNow(prompt: string, emit: AgentEmit, attachments: Age
     try {
         files = await writeAttachmentFiles(attachments);
         codexApp ||= await CodexAppClient.start(emit);
-        const threadId = await ensureCodexThread(codexApp, options);
-        await codexApp.startTurn(threadId, prompt, files);
+        let threadId = await ensureCodexThread(codexApp, options, emit);
+        try {
+            await codexApp.startTurn(threadId, prompt, files);
+        } catch (error) {
+            if (!isRecoverableThreadError(error)) throw error;
+            emit("agent_log", { text: `Codex thread unavailable, starting a new thread: ${errorMessage(error)}` });
+            codexThreadId = "";
+            threadId = await ensureCodexThread(codexApp, { cwd: options.cwd }, emit);
+            await codexApp.startTurn(threadId, prompt, files);
+        }
     } catch (error) {
         emit("agent_error", { message: errorMessage(error) });
     } finally {
@@ -91,25 +99,35 @@ export async function archiveCodexThread(emit: AgentEmit, threadId: string, cwd?
 
 export function runClaudeTurn(prompt: string, emit: AgentEmit) {
     if (!prompt.trim()) return;
-    const child = spawnAgent("claude", ["-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages", "--allowedTools", "mcp__fishxlab__*", prompt], ["ignore", "pipe", "pipe"], emit);
+    const child = spawnAgent("claude", ["-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages", "--allowedTools", "mcp__prolab__*", prompt], ["ignore", "pipe", "pipe"], emit);
     if (!child) return;
     pipeJsonLines(child, emit, "claude");
 }
 
-async function ensureCodexThread(app: CodexAppClient, options: CodexRunOptions) {
+async function ensureCodexThread(app: CodexAppClient, options: CodexRunOptions, emit: AgentEmit) {
     if (options.threadId) {
-        const result = await app.readThread(options.threadId, false);
-        assertThreadWorkspace(field(result, "thread") || {}, options.cwd);
-        const thread = await app.resumeThread(options.threadId, options.cwd);
-        assertThreadWorkspace(thread, options.cwd);
-        codexThreadId = String(field(thread, "id") || options.threadId);
-        return codexThreadId;
+        if (options.threadId === codexThreadId) return codexThreadId;
+        try {
+            const result = await app.readThread(options.threadId, false);
+            assertThreadWorkspace(field(result, "thread") || {}, options.cwd);
+            const thread = await app.resumeThread(options.threadId, options.cwd);
+            assertThreadWorkspace(thread, options.cwd);
+            codexThreadId = String(field(thread, "id") || options.threadId);
+            return codexThreadId;
+        } catch (error) {
+            if (!isRecoverableThreadError(error)) throw error;
+            emit("agent_log", { text: `Codex thread unavailable, starting a new thread: ${errorMessage(error)}` });
+        }
     }
     if (!codexThreadId) {
         const thread = await app.startThread(options.cwd);
         codexThreadId = String(field(thread, "id") || "");
     }
     return codexThreadId;
+}
+
+function isRecoverableThreadError(error: unknown) {
+    return /thread not loaded|no rollout found/i.test(errorMessage(error));
 }
 
 class CodexAppClient {
@@ -136,7 +154,7 @@ class CodexAppClient {
             codexThreadId = "";
             emit("agent_log", { text: `Codex app-server exited: ${code ?? 0}` });
         });
-        await client.request("initialize", { clientInfo: { name: "canvas-agent", title: "fishxlab Agent", version: VERSION }, capabilities: { experimentalApi: true, requestAttestation: false } });
+        await client.request("initialize", { clientInfo: { name: "canvas-agent", title: "ProLab Agent", version: VERSION }, capabilities: { experimentalApi: true, requestAttestation: false } });
         client.notify("initialized");
         return client;
     }
@@ -280,7 +298,7 @@ function canvasAgentMcpCommand() {
 }
 
 function codexConfig() {
-    return { mcp_servers: { "fishxlab": { command: canvasAgentMcp.command, args: canvasAgentMcp.args, default_tools_approval_mode: "approve", startup_timeout_sec: 20, tool_timeout_sec: 90 } } };
+    return { mcp_servers: { "prolab": { command: canvasAgentMcp.command, args: canvasAgentMcp.args, default_tools_approval_mode: "approve", startup_timeout_sec: 20, tool_timeout_sec: 90 } } };
 }
 
 function codexInput(prompt: string, images: string[]) {
@@ -443,7 +461,7 @@ async function writeAttachmentFiles(attachments: AgentAttachment[]) {
 async function writeAttachmentFile(item: AgentAttachment) {
     const [, meta = "", data = ""] = item.dataUrl?.match(/^data:([^;]+);base64,(.+)$/) || [];
     if (!data) throw new Error(`图片附件无效：${item.name || "未命名图片"}`);
-    const file = path.join(os.tmpdir(), `fishxlab-${Date.now()}-${Math.random().toString(16).slice(2)}.${imageExt(meta || item.type)}`);
+    const file = path.join(os.tmpdir(), `prolab-${Date.now()}-${Math.random().toString(16).slice(2)}.${imageExt(meta || item.type)}`);
     await fs.writeFile(file, Buffer.from(data, "base64"));
     return file;
 }

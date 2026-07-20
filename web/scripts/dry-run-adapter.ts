@@ -11,7 +11,7 @@ function readJsonBody(init: RequestInit) {
 }
 
 async function main() {
-    const baseUrl = "https://api.fishxcode.com";
+    const baseUrl = "https://newapi.prorisehub.com";
     const apiKey = "sk-test";
 
     assert(inferModelInfo("gemini-2.5-flash-image").apiFormat === "dalle", "gemini image should use dalle-compatible protocol");

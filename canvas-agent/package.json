@@ -1,5 +1,5 @@
 {
-  "name": "@fishxcode/canvas-agent",
+  "name": "@proapi-hub/canvas-agent",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",

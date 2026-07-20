@@ -2,7 +2,7 @@ import localforage from "localforage";
 import type { StateStorage } from "zustand/middleware";
 
 localforage.config({
-    name: "fishxlab",
+    name: "prolab",
     storeName: "app_state",
 });
 

@@ -14,6 +14,6 @@ export const useThemeStore = create<ThemeStore>()(
             theme: "dark",
             setTheme: (theme) => set({ theme }),
         }),
-        { name: "fishxlab:theme_store" },
+        { name: "prolab:theme_store" },
     ),
 );

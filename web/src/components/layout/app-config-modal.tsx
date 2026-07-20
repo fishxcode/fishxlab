@@ -1,18 +1,17 @@
-"use client";
-
-import { App, Button, Checkbox, Form, Input, Modal, Progress, Segmented, Select, Tabs } from "antd";
-import { Cloud, Plus, RefreshCw, Trash2, WandSparkles, Wifi } from "lucide-react";
-import { useState } from "react";
+import { App, Button, Checkbox, Form, Input, Modal, Progress, Select, Switch, Tabs } from "antd";
+import { CircleAlert, Cloud, KeyRound, Link2, Plus, RefreshCw, ShieldCheck, Trash2, WandSparkles, Wifi } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { ModelPicker } from "@/components/model-picker";
 import { QuickConnectModal } from "@/components/onboarding/quick-connect-modal";
 import { DEFAULT_UPSTREAM } from "@/lib/pro-spec/constants";
-import { fetchFishxapiTokenUsage, formatUsageAmount, summarizeModelCategories, type FishxapiTokenUsage } from "@/lib/pro-spec/fishxapi-usage";
+import { fetchProApiTokenUsage, formatUsageAmount, summarizeModelCategories, type ProApiTokenUsage } from "@/lib/pro-spec/proapi-usage";
 import { fetchChannelModels } from "@/services/api/image";
 import { syncAppDataToWebdav, type AppSyncDomainKey, type AppSyncProgressEvent } from "@/services/app-sync";
 import { testWebdavConnection, WEBDAV_MANIFEST_FILE_NAME } from "@/services/webdav-sync";
 import { audioFormatOptions, audioVoiceOptions, normalizeAudioSpeedValue } from "@/lib/audio-generation";
-import { channelSourceLabel, createModelChannel, defaultBaseUrlForApiFormat, filterModelsByCapability, mergeSuggestedModelOptions, modelOptionLabel, modelOptionSearchText, modelOptionsFromChannels, normalizeModelOptionValue, useConfigStore, type AiConfig, type ApiCallFormat, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
+import { useCanvasAgentStore } from "@/stores/canvas/use-canvas-agent-store";
+import { channelSourceLabel, createModelChannel, defaultBaseUrlForApiFormat, filterModelsByCapability, mergeSuggestedModelOptions, modelOptionLabel, modelOptionSearchText, modelOptionsFromChannels, normalizeModelOptionValue, useConfigStore, type AiConfig, type ApiCallFormat, type ConfigTabKey, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
 
 type ModelGroup = {
     capability: ModelCapability;
@@ -57,6 +56,11 @@ const webdavDomainLabels: Record<AppSyncDomainKey, string> = {
     "image-workbench": "生图工作台",
     "video-workbench": "视频创作台",
 };
+const codexSetupSteps = [
+    { title: "安装 Codex 插件", text: "先在 Codex App 安装 Infinite Canvas 插件，插件会注册 MCP 并尝试启动本地 Canvas Agent。" },
+    { title: "连接本地 Agent", text: "在本页填入 Local URL 和 Connect token 后点击连接。" },
+    { title: "手动启动备用", text: "如果插件没有自动启动本地服务，在终端运行下面命令。", command: "npx -y @basketikun/canvas-agent" },
+];
 
 function createWebdavDomainProgress(): Record<AppSyncDomainKey, WebdavDomainProgress> {
     return webdavDomainKeys.reduce(
@@ -68,16 +72,16 @@ function createWebdavDomainProgress(): Record<AppSyncDomainKey, WebdavDomainProg
     );
 }
 
-export function AppConfigModal() {
+export function AppConfigPanel({ showDoneButton = false, initialTab = "channels" }: { showDoneButton?: boolean; initialTab?: ConfigTabKey }) {
     const { message } = App.useApp();
-    const [activeTab, setActiveTab] = useState("channels");
+    const [activeTab, setActiveTab] = useState<ConfigTabKey>(initialTab);
     const [loadingChannelId, setLoadingChannelId] = useState("");
     const [testingWebdav, setTestingWebdav] = useState(false);
     const [syncingWebdav, setSyncingWebdav] = useState(false);
     const [quickConnectOpen, setQuickConnectOpen] = useState(false);
-    const [fishxlabUsage, setFishxapiUsage] = useState<FishxapiTokenUsage | null>(null);
-    const [fishxlabUsageError, setFishxapiUsageError] = useState("");
-    const [loadingFishxapiUsage, setLoadingFishxapiUsage] = useState(false);
+    const [proApiUsage, setProApiUsage] = useState<ProApiTokenUsage | null>(null);
+    const [proApiUsageError, setProApiUsageError] = useState("");
+    const [loadingProApiUsage, setLoadingProApiUsage] = useState(false);
     const [modelSelection, setModelSelection] = useState<ModelSelectionDraft | null>(null);
     const [webdavSyncStatus, setWebdavSyncStatus] = useState("");
     const [webdavDomainProgress, setWebdavDomainProgress] = useState(createWebdavDomainProgress);
@@ -85,14 +89,24 @@ export function AppConfigModal() {
     const webdav = useConfigStore((state) => state.webdav);
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const updateWebdavConfig = useConfigStore((state) => state.updateWebdavConfig);
-    const isConfigOpen = useConfigStore((state) => state.isConfigOpen);
     const shouldPromptContinue = useConfigStore((state) => state.shouldPromptContinue);
     const setConfigDialogOpen = useConfigStore((state) => state.setConfigDialogOpen);
     const clearPromptContinue = useConfigStore((state) => state.clearPromptContinue);
+    const agentUrl = useCanvasAgentStore((state) => state.url);
+    const agentToken = useCanvasAgentStore((state) => state.token);
+    const agentConnected = useCanvasAgentStore((state) => state.connected);
+    const agentEnabled = useCanvasAgentStore((state) => state.enabled);
+    const agentActivity = useCanvasAgentStore((state) => state.activity);
+    const agentConnectError = useCanvasAgentStore((state) => state.connectError);
+    const agentConfirmTools = useCanvasAgentStore((state) => state.confirmTools);
+    const setAgentState = useCanvasAgentStore((state) => state.setAgentState);
+    const connectAgent = useCanvasAgentStore((state) => state.connectAgent);
+    const disconnectAgent = useCanvasAgentStore((state) => state.disconnectAgent);
     const modelOptions = config.models.map((model) => ({ label: modelOptionLabel(config, model), value: model, searchText: modelOptionSearchText(config, model) }));
     const webdavReady = Boolean(webdav.url.trim());
-    const fishxlabChannel = config.channels[0];
-    const fishxlabModelSummary = summarizeModelCategories(fishxlabChannel?.models || []);
+    const proApiChannel = config.channels[0];
+    const proApiModelSummary = summarizeModelCategories(proApiChannel?.models || []);
+    useEffect(() => setActiveTab(initialTab), [initialTab]);
 
     const saveConfig = (nextConfig: AiConfig) => {
         (Object.keys(nextConfig) as Array<keyof AiConfig>).forEach((key) => updateConfig(key, nextConfig[key]));
@@ -199,24 +213,24 @@ export function AppConfigModal() {
         }
     };
 
-    const refreshFishxapiUsage = async () => {
-        const channel = fishxlabChannel;
+    const refreshProApiUsage = async () => {
+        const channel = proApiChannel;
         if (!channel?.baseUrl.trim() || !channel.apiKey.trim()) {
-            message.error("请先完成 fishxapi 一键接入或填写主渠道 API Key");
+            message.error("请先完成 ProAPI 一键接入或填写主渠道 API Key");
             return;
         }
-        setLoadingFishxapiUsage(true);
-        setFishxapiUsageError("");
+        setLoadingProApiUsage(true);
+        setProApiUsageError("");
         try {
-            const usage = await fetchFishxapiTokenUsage({ baseUrl: channel.baseUrl, apiKey: channel.apiKey });
-            setFishxapiUsage(usage);
-            message.success("fishxapi 额度已更新");
+            const usage = await fetchProApiTokenUsage({ baseUrl: channel.baseUrl, apiKey: channel.apiKey });
+            setProApiUsage(usage);
+            message.success("ProAPI 额度已更新");
         } catch (error) {
             const text = error instanceof Error ? error.message : "额度查询失败";
-            setFishxapiUsageError(text);
+            setProApiUsageError(text);
             message.error(text);
         } finally {
-            setLoadingFishxapiUsage(false);
+            setLoadingProApiUsage(false);
         }
     };
 
@@ -277,29 +291,19 @@ export function AppConfigModal() {
         }
     };
 
+    const updateAgentConfig = (patch: { url?: string; token?: string }) => {
+        setAgentState({ ...patch, connectError: "" });
+        if (patch.url !== undefined) localStorage.setItem("canvas-agent-url", patch.url.trim().replace(/\/$/, ""));
+        if (patch.token !== undefined) localStorage.setItem("canvas-agent-token", patch.token);
+    };
+
+    const toggleAgentConnection = () => (agentEnabled ? disconnectAgent({ connectError: "" }) : connectAgent());
+
     return (
         <>
-        <Modal
-            title={
-                <div>
-                    <div className="text-lg font-semibold">配置与用户偏好</div>
-                    <div className="mt-1 text-xs font-normal text-muted-foreground">渠道聚合、模型选择和同步偏好</div>
-                </div>
-            }
-            open={isConfigOpen}
-            width={980}
-            centered
-            onCancel={() => setConfigDialogOpen(false)}
-            styles={{ body: { maxHeight: "72vh", overflowY: "auto", paddingRight: 12 } }}
-            footer={
-                <Button type="primary" onClick={finishConfig}>
-                    完成
-                </Button>
-            }
-        >
             <Tabs
                 activeKey={activeTab}
-                onChange={setActiveTab}
+                onChange={(key) => setActiveTab(key as ConfigTabKey)}
                 items={[
                     {
                         key: "channels",
@@ -330,21 +334,21 @@ export function AppConfigModal() {
                                 <section className="mb-4 rounded-lg border border-border p-3">
                                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                                         <div>
-                                            <div className="text-sm font-semibold">fishxapi 状态</div>
+                                            <div className="text-sm font-semibold">ProAPI 状态</div>
                                             <div className="mt-1 text-xs text-muted-foreground">这里只使用 sk- API Key 查询模型与额度，不需要 AccessToken。</div>
                                         </div>
-                                        <Button size="small" icon={<RefreshCw className="size-3.5" />} loading={loadingFishxapiUsage} onClick={() => void refreshFishxapiUsage()}>
+                                        <Button size="small" icon={<RefreshCw className="size-3.5" />} loading={loadingProApiUsage} onClick={() => void refreshProApiUsage()}>
                                             刷新额度
                                         </Button>
                                     </div>
                                     <div className="grid gap-2 text-sm md:grid-cols-5">
-                                        <StatusItem label="主渠道" value={fishxlabChannel?.name || "未配置"} />
-                                        <StatusItem label="模型" value={`${fishxlabModelSummary.total} 个`} />
-                                        <StatusItem label="图像 / 视频" value={`${fishxlabModelSummary.image} / ${fishxlabModelSummary.video}`} />
-                                        <StatusItem label="剩余额度" value={fishxlabUsage ? (fishxlabUsage.unlimitedQuota ? "无限额度" : formatUsageAmount(fishxlabUsage.totalAvailable)) : "未查询"} />
-                                        <StatusItem label="模型白名单" value={fishxlabUsage ? (fishxlabUsage.modelLimitsEnabled ? `${fishxlabUsage.modelLimits.length} 个` : "未限制") : "未查询"} />
+                                        <StatusItem label="主渠道" value={proApiChannel?.name || "未配置"} />
+                                        <StatusItem label="模型" value={`${proApiModelSummary.total} 个`} />
+                                        <StatusItem label="图像 / 视频" value={`${proApiModelSummary.image} / ${proApiModelSummary.video}`} />
+                                        <StatusItem label="剩余额度" value={proApiUsage ? (proApiUsage.unlimitedQuota ? "无限额度" : formatUsageAmount(proApiUsage.totalAvailable)) : "未查询"} />
+                                        <StatusItem label="模型白名单" value={proApiUsage ? (proApiUsage.modelLimitsEnabled ? `${proApiUsage.modelLimits.length} 个` : "未限制") : "未查询"} />
                                     </div>
-                                    {fishxlabUsageError ? <div className="mt-2 text-xs text-muted-foreground">额度未读取：{fishxlabUsageError}</div> : null}
+                                    {proApiUsageError ? <div className="mt-2 text-xs text-muted-foreground">额度未读取：{proApiUsageError}</div> : null}
                                 </section>
                                 <div className="space-y-3">
                                     {config.channels.map((channel) => (
@@ -483,27 +487,16 @@ export function AppConfigModal() {
                                                 <Cloud className="size-4" />
                                                 WebDAV 同步
                                             </div>
-                                            <div className="mt-1 text-xs text-muted-foreground">同步画布、我的素材、生成记录和本地媒体文件，不包含 AI API Key；服务不支持 CORS 时可走 Next.js 转发。</div>
+                                            <div className="mt-1 text-xs text-stone-500">同步画布、我的素材、生成记录和本地媒体文件，不包含 AI API Key；浏览器会直接连接 WebDAV 服务。</div>
                                         </div>
                                         <div className="text-xs text-muted-foreground">{webdav.lastSyncedAt ? `上次同步 ${formatWebdavTime(webdav.lastSyncedAt)}` : "尚未同步"}</div>
                                     </div>
                                     <div className="grid gap-4 md:grid-cols-2">
-                                        <Form.Item label="连接方式" className="mb-4 md:col-span-2">
-                                            <Segmented
-                                                block
-                                                value={webdav.proxyMode}
-                                                onChange={(value) => updateWebdavConfig("proxyMode", value as typeof webdav.proxyMode)}
-                                                options={[
-                                                    { label: "前端直连", value: "direct" },
-                                                    { label: "Next.js 转发", value: "nextjs" },
-                                                ]}
-                                            />
-                                        </Form.Item>
                                         <Form.Item label="WebDAV 地址" className="mb-4">
                                             <Input value={webdav.url} placeholder="https://nas.example.com/webdav" onChange={(event) => updateWebdavConfig("url", event.target.value)} />
                                         </Form.Item>
                                         <Form.Item label="远程目录" extra={`会在该目录下分业务目录保存，每个目录包含 ${WEBDAV_MANIFEST_FILE_NAME} 和 files/`} className="mb-4">
-                                            <Input value={webdav.directory} placeholder="fishxlab" onChange={(event) => updateWebdavConfig("directory", event.target.value)} />
+                                            <Input value={webdav.directory} placeholder="prolab" onChange={(event) => updateWebdavConfig("directory", event.target.value)} />
                                         </Form.Item>
                                         <Form.Item label="用户名" className="mb-0">
                                             <Input value={webdav.username} autoComplete="username" onChange={(event) => updateWebdavConfig("username", event.target.value)} />
@@ -526,9 +519,69 @@ export function AppConfigModal() {
                             </Form>
                         ),
                     },
+                    {
+                        key: "codex",
+                        label: "Codex",
+                        children: (
+                            <Form layout="vertical" requiredMark={false}>
+                                <section className="rounded-lg border border-stone-200 p-3 dark:border-stone-800">
+                                    <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                                        <div>
+                                            <div className="flex items-center gap-2 text-sm font-semibold">
+                                                <Link2 className="size-4" />
+                                                连接本地 Codex
+                                            </div>
+                                            <div className="mt-1 text-xs text-stone-500">用于画布 Agent 连接本机 Codex 插件启动的 Canvas Agent。</div>
+                                        </div>
+                                        <div className={agentConnectError ? "text-xs text-red-600" : "text-xs text-stone-500"}>{agentConnectError ? "连接失败" : agentConnected ? agentActivity || "已连接" : agentEnabled ? "连接中" : "未连接"}</div>
+                                    </div>
+                                    <div className="mb-4 grid gap-2 md:grid-cols-3">
+                                        {codexSetupSteps.map((step, index) => (
+                                            <div key={step.title} className="rounded-md border border-stone-200 p-3 dark:border-stone-800">
+                                                <div className="text-xs font-semibold text-stone-500">步骤 {index + 1}</div>
+                                                <div className="mt-1 text-sm font-medium">{step.title}</div>
+                                                <div className="mt-1 text-xs leading-5 text-stone-500">{step.text}</div>
+                                                {step.command ? <code className="mt-2 block overflow-x-auto rounded bg-stone-100 px-2 py-1.5 text-[11px] text-stone-700 dark:bg-stone-900 dark:text-stone-200">{step.command}</code> : null}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        <Form.Item label="Local URL" className="mb-4">
+                                            <Input prefix={<Link2 className="mr-1 size-4 text-stone-400" />} value={agentUrl} placeholder="http://127.0.0.1:17371" onChange={(event) => updateAgentConfig({ url: event.target.value })} />
+                                        </Form.Item>
+                                        <Form.Item label="Connect token" className="mb-4">
+                                            <Input.Password prefix={<KeyRound className="mr-1 size-4 text-stone-400" />} value={agentToken} placeholder="自动发现，或手动填入 Connect token" onChange={(event) => updateAgentConfig({ token: event.target.value })} />
+                                        </Form.Item>
+                                    </div>
+                                    {agentConnectError ? <div className="mb-3 rounded-md border border-red-200 px-3 py-2 text-xs text-red-600 dark:border-red-900/60">{agentConnectError}</div> : null}
+                                    <div className="mb-3 flex justify-end">
+                                        <Button type={agentEnabled ? "default" : "primary"} icon={<Wifi className="size-4" />} onClick={toggleAgentConnection}>
+                                            {agentConnected ? "断开" : agentEnabled ? "取消连接" : "连接"}
+                                        </Button>
+                                    </div>
+                                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-stone-200 px-3 py-2 dark:border-stone-800">
+                                        <div className="flex min-w-0 items-center gap-2">
+                                            <ShieldCheck className="size-4 text-stone-500" />
+                                            <div>
+                                                <div className="text-sm font-medium">执行画布操作前确认</div>
+                                                <div className="mt-0.5 text-xs text-stone-500">关闭后，本地 Codex 可直接执行画布工具调用。不再需要人工确认</div>
+                                            </div>
+                                        </div>
+                                        <Switch checked={agentConfirmTools} onChange={(confirmTools) => setAgentState({ confirmTools })} />
+                                    </div>
+                                </section>
+                            </Form>
+                        ),
+                    },
                 ]}
             />
-        </Modal>
+            {showDoneButton ? (
+                <div className="mt-4 flex justify-end">
+                    <Button type="primary" onClick={finishConfig}>
+                        完成
+                    </Button>
+                </div>
+            ) : null}
         <QuickConnectModal open={quickConnectOpen} onClose={() => setQuickConnectOpen(false)} />
         <Modal
             title="选择要保存的模型"
@@ -571,6 +624,30 @@ export function AppConfigModal() {
             ) : null}
         </Modal>
         </>
+    );
+}
+
+export function AppConfigModal() {
+    const isConfigOpen = useConfigStore((state) => state.isConfigOpen);
+    const configTab = useConfigStore((state) => state.configTab);
+    const setConfigDialogOpen = useConfigStore((state) => state.setConfigDialogOpen);
+    return (
+        <Modal
+            title={
+                <div>
+                    <div className="text-lg font-semibold">配置与用户偏好</div>
+                    <div className="mt-1 text-xs font-normal text-stone-500">渠道聚合、模型选择和同步偏好</div>
+                </div>
+            }
+            open={isConfigOpen}
+            width={980}
+            centered
+            onCancel={() => setConfigDialogOpen(false)}
+            styles={{ body: { maxHeight: "72vh", overflowY: "auto", paddingRight: 12 } }}
+            footer={null}
+        >
+            <AppConfigPanel showDoneButton initialTab={configTab} />
+        </Modal>
     );
 }
 

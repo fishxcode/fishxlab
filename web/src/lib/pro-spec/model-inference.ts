@@ -421,7 +421,7 @@ export function inferApiFormat(modelId: string): ApiFormat {
   // Grok Video（grok-imagine-video / grok-imagine1.5-video / grok-image-video 等）
   if (/grok-imag(?:e|ine).*video/.test(id)) return 'openai-video'
   // OpenAI Images API 兼容（/v1/images/generations）：
-  // fishxapi 风格图像统一走 dalle 格式。在 gemini 规则之前匹配，
+  // ProAPI 风格图像统一走 dalle 格式。在 gemini 规则之前匹配，
   // 因为 nano-banana / imagen 是 Google 系图像但仍走 dalle 兼容协议。
   // Riverflow（Sourceful/OpenRouter）走 chat completions 协议（含 sourceful/ 前缀或 riverflow 关键字）
   if (/riverflow|sourceful\//.test(id)) return 'openai-chat'

@@ -7,7 +7,7 @@ import { Check, RefreshCw, WandSparkles } from "lucide-react";
 import { DEFAULT_UPSTREAM, normalizeBaseUrl } from "@/lib/pro-spec/constants";
 import { inferModelInfo } from "@/lib/pro-spec/model-inference";
 import { getModelLogoById } from "@/lib/pro-spec/model-logo";
-import { fetchFishxapiTokenUsage, formatUsageAmount, summarizeModelCategories, type FishxapiTokenUsage } from "@/lib/pro-spec/fishxapi-usage";
+import { fetchProApiTokenUsage, formatUsageAmount, summarizeModelCategories, type ProApiTokenUsage } from "@/lib/pro-spec/proapi-usage";
 import { fetchChannelModels } from "@/services/api/image";
 import { configWithQuickConnectChannel, createModelChannel, useConfigStore, type AiConfig } from "@/stores/use-config-store";
 
@@ -38,7 +38,7 @@ export function QuickConnectModal({ open, initialApiKey = "", initialBaseUrl = d
     const [loading, setLoading] = useState(false);
     const [models, setModels] = useState<ModelItem[]>([]);
     const [selected, setSelected] = useState<string[]>([]);
-    const [usage, setUsage] = useState<FishxapiTokenUsage | null>(null);
+    const [usage, setUsage] = useState<ProApiTokenUsage | null>(null);
     const [usageError, setUsageError] = useState("");
 
     useEffect(() => {
@@ -74,14 +74,14 @@ export function QuickConnectModal({ open, initialApiKey = "", initialBaseUrl = d
         try {
             const channel = createModelChannel({
                 id: config.channels[0]?.id || "default",
-                name: "fishxapi",
+                name: "ProAPI",
                 baseUrl: normalizedBaseUrl,
                 apiKey: apiKey.trim(),
                 apiFormat: "openai",
             });
             const [ids, usageResult] = await Promise.all([
                 fetchChannelModels(channel),
-                fetchFishxapiTokenUsage({ baseUrl: normalizedBaseUrl, apiKey: apiKey.trim() })
+                fetchProApiTokenUsage({ baseUrl: normalizedBaseUrl, apiKey: apiKey.trim() })
                     .then((value) => ({ value, error: "" }))
                     .catch((error) => ({ value: null, error: error instanceof Error ? error.message : "额度查询失败" })),
             ]);
@@ -116,14 +116,14 @@ export function QuickConnectModal({ open, initialApiKey = "", initialBaseUrl = d
         }
         const channel = createModelChannel({
             id: config.channels[0]?.id || "default",
-            name: "fishxapi",
+            name: "ProAPI",
             baseUrl: normalizeBaseUrl(baseUrl || defaultBaseUrl),
             apiKey: apiKey.trim(),
             apiFormat: "openai",
             models: selected,
         });
         saveConfig(configWithQuickConnectChannel(config, channel));
-        message.success("fishxapi 一键接入已完成");
+        message.success("ProAPI 一键接入已完成");
         onClose();
     };
 
@@ -142,7 +142,7 @@ export function QuickConnectModal({ open, initialApiKey = "", initialBaseUrl = d
             title={
                 <div className="flex items-center gap-2">
                     <WandSparkles className="size-5" />
-                    <span>fishxapi 一键接入</span>
+                    <span>ProAPI 一键接入</span>
                 </div>
             }
             open={open}

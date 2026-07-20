@@ -10,7 +10,7 @@
  *
  * 参考来源：
  * - DALL-E:        https://platform.openai.com/docs/api-reference/images
- * - gpt-image:     OpenAI 官方 + fishxapi 扩展 aspect_ratio
+ * - gpt-image:     OpenAI 官方 + ProAPI 扩展 aspect_ratio
  * - Flux 2:        BFL 官方；OpenAI 兼容代理接受 size（自动转 width/height），不支持 aspect_ratio/quality/negative_prompt
  * - Grok Imagine:  https://docs.x.ai/developers/model-capabilities/images/generation （aspect_ratio + resolution，不接 size/quality/seed）
  * - Nano Banana:   Google Gemini imageConfig（OpenAI 兼容代理转发：size 仅 1K/2K/4K + aspect_ratio）
@@ -141,7 +141,7 @@ export function buildDalleEndpointBody(opts: BuildBodyOpts): Record<string, any>
     case 'gpt-image': {
       // gpt-image-2：
       //   size(auto + WxH，16 倍数 / 0.65M-8.3M 像素), quality(auto|low|medium|high),
-      //   aspect_ratio（fishxapi 中转扩展字段）, background, output_format(png|jpeg|webp),
+      //   aspect_ratio（ProAPI 中转扩展字段）, background, output_format(png|jpeg|webp),
       //   output_compression（仅 jpeg/webp）, moderation(auto|low), input_fidelity(low|high)
       if (p.size) body.size = normalizeSize(p.size)
       if (p.quality) body.quality = p.quality
@@ -184,7 +184,7 @@ export function buildDalleEndpointBody(opts: BuildBodyOpts): Record<string, any>
 
     case 'nano-banana': {
       // Nano Banana（Gemini 2.5/3 Flash Image）：
-      //   aspect_ratio + imageSize（仅 1K/2K/4K）由 fishxapi 中转层转 imageConfig
+      //   aspect_ratio + imageSize（仅 1K/2K/4K）由 ProAPI 中转层转 imageConfig
       // 不支持：quality / seed / negative_prompt / 任意 WxH 像素 size
       if (p.aspectRatio) body.aspect_ratio = p.aspectRatio
       if (p.size) {
@@ -260,7 +260,7 @@ export function buildDalleEndpointBody(opts: BuildBodyOpts): Record<string, any>
       break
     }
     case 'hunyuan-image': {
-      // Hunyuan Image 在 fishxapi 中按 OpenAI Images 兼容端点调用，不走 chat。
+      // Hunyuan Image 在 ProAPI 中按 OpenAI Images 兼容端点调用，不走 chat。
       // 只透传通用 size/quality，避免把 chat completions 扩展字段带入 images 端点。
       if (p.size) body.size = normalizeSize(p.size)
       if (p.quality) body.quality = p.quality
@@ -287,7 +287,7 @@ export function buildDalleEndpointBody(opts: BuildBodyOpts): Record<string, any>
 /**
  * 构造 openai-chat 端点（/v1/chat/completions）请求 body 的扩展字段。
  *
- * chat completions 协议主体是 messages，但 fishxapi 中转层会读取顶层 size/aspect_ratio/quality
+ * chat completions 协议主体是 messages，但 ProAPI 中转层会读取顶层 size/aspect_ratio/quality
  * 等字段并转发给绘图后端（gpt4o-image / sora-image / grok-image / qwen-image 走 chat 时）。
  *
  * 此函数返回需要追加到 body 的扩展字段集合，调用方将其展开到 body 中即可。

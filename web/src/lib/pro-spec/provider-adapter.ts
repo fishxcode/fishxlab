@@ -18,7 +18,6 @@ type BuildRequestOptions = {
 type ParsedResource = {
     resourceUrl?: string;
     resources?: string[];
-    kind?: "task" | "url";
     error?: string;
 };
 
@@ -38,7 +37,7 @@ export function buildRequest(opts: BuildRequestOptions): ProviderRequest {
     if (apiFormat === "mj-proxy" || apiFormat === "koukoutu" || apiFormat === "video-unified") {
         throw new Error(`${apiFormat} 暂未在浏览器直连模式支持`);
     }
-    throw new Error(`${apiFormat} 暂未接入 fishxapi provider adapter`);
+    throw new Error(`${apiFormat} 暂未接入 ProAPI provider adapter`);
 }
 
 export function isGrokImagineVideo(modelId: string) {
@@ -209,8 +208,8 @@ async function parseVideoTaskResponse(resp: Response): Promise<ParsedResource> {
     const { payload, error } = await parseJsonResponse(resp);
     if (error) return { error };
     const data = (payload.data && typeof payload.data === "object" ? payload.data : payload) as Record<string, unknown>;
-    if (typeof data.id === "string" && data.id) return { resourceUrl: data.id, kind: "task" };
-    if (typeof data.url === "string" && data.url) return { resourceUrl: data.url, kind: "url" };
+    if (typeof data.id === "string" && data.id) return { resourceUrl: data.id };
+    if (typeof data.url === "string" && data.url) return { resourceUrl: data.url };
     return { error: "视频接口没有返回任务 ID" };
 }
 

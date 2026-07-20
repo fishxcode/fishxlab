@@ -1,12 +1,36 @@
 # CHANGELOG
 
-本文件是 fishxlab 的唯一发布公告来源。Web 端版本弹窗和文档站 `/docs/progress/changelog` 都读取这里。
+本文件是 ProLab 的唯一发布公告来源。Web 端版本弹窗和文档站 `/docs/progress/changelog` 都读取这里。
 
 - 准备中的变更先写到 `Unreleased`。
 - 正式发版时，把 `Unreleased` 内容移动到新的 `vX.Y.Z - YYYY-MM-DD` 区块。
 - 每次发版必须同步更新根目录 `VERSION`。
 
 ## Unreleased
+
++ [新增] 画布节点支持统一维护名称字段，默认显示在节点上方，并可直接双击名称编辑。
++ [新增] 画布新增组节点，支持节点拖入/拖出分组、拖拽高亮吸附和移动组时带动子节点。
++ [调整] 画布节点顶部工具条改为点击选中节点后显示，避免鼠标经过节点时频繁弹出。
+
+## v0.6.0 - 2026-07-09
+
++ [新增] 新增Codex App插件支持。
++ [新增] 配置与用户偏好新增独立页面和 Codex 连接配置 Tab。
++ [新增] 新增GitHub Pages 前端静态站点发布 workflow。
++ [新增] 图片切图支持等分线直接拖拽调整，并可新增、删除和重置横向 / 纵向切图线。
++ [调整] Docker 运行镜像改为 nginx 静态托管。
++ [调整] 移除网站Agent模式，专注于连接Codex Agent操作画布
++ [修复] 修复生图工作台重试成功结果刷新后丢失的问题。
++ [修复] 修复 Gemini 调用格式生图未传递尺寸比例配置的问题。
++ [修复] 修复前端 TypeScript 构建报错。
++ [修复] 修复画布生成配置切换文本/视频/音频模式时模型仍显示为生图模型的问题。
++ [修复] 兼容中转站视频任务直接返回视频 URL 且没有 `/content` 接口的情况，并优化失败原因展示。
+
+## v0.5.0 - 2026-07-05
+
++ [新增] 渠道兼容Gemini格式。
++ [调整] 前端从 Next.js 迁移到 Vite，项目改为静态前端构建。
++ [调整] 移除已 404 的 EvoLinkAI 提示词来源。
 
 ## v0.0.2 - 2026-06-21
 
@@ -19,12 +43,12 @@
 
 ### 版本定位
 
-fishxlab v0.0.1 是基于 `basketikun/infinite-canvas` 的初始迁移版本。这个版本保留原项目 AGPL-3.0 授权声明和 `canvas.best` 来源标识，并把 fishxapi 用户常用能力整合到 Pro Canvas 工作台。
+ProLab v0.0.1 是基于 `basketikun/infinite-canvas` 的初始迁移版本。这个版本保留原项目 AGPL-3.0 授权声明和 `canvas.best` 来源标识，并把 ProAPI 用户常用能力整合到 Pro Canvas 工作台。
 
 ### 面向用户的变化
 
-+ [新增] 无需注册登录。应用默认在浏览器中运行，用户自行配置 fishxapi 或 OpenAI 兼容接口即可使用。
-+ [新增] fishxapi 一键接入。支持默认上游、URL 参数预填、API Key 粘贴、模型拉取、模型选择和本地持久化。
++ [新增] 无需注册登录。应用默认在浏览器中运行，用户自行配置 ProAPI 或 OpenAI 兼容接口即可使用。
++ [新增] ProAPI 一键接入。支持默认上游、URL 参数预填、API Key 粘贴、模型拉取、模型选择和本地持久化。
 + [新增] 模型图标和能力识别。模型列表会自动识别 GPT、Claude、Gemini、Grok、Doubao、Hunyuan 等模型，并显示对应图标。
 + [新增] 标准模型参数适配。覆盖 OpenAI Images、image edits、OpenAI Video 和 Grok video chat 兼容协议，`hunyuan-image-v3` 等图像模型不会错误走 chat 协议。
 + [新增] 本地数据持久化。API 配置、画布、素材、生图记录和视频记录默认保存在当前浏览器本地。

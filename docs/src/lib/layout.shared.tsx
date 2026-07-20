@@ -28,7 +28,7 @@ export function baseOptions(): BaseLayoutProps {
             <ArrowUpRight className="size-4" />
           </span>
         ),
-        url: 'https://fishxlab.fishxcode.com/',
+        url: 'https://prolab.prorisehub.com/',
         external: true,
         on: 'nav',
       },
