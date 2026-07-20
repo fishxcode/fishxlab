@@ -37,7 +37,7 @@ export function buildRequest(opts: BuildRequestOptions): ProviderRequest {
     if (apiFormat === "mj-proxy" || apiFormat === "koukoutu" || apiFormat === "video-unified") {
         throw new Error(`${apiFormat} 暂未在浏览器直连模式支持`);
     }
-    throw new Error(`${apiFormat} 暂未接入 ProAPI provider adapter`);
+    throw new Error(`${apiFormat} 暂未接入 fishxapi provider adapter`);
 }
 
 export function isGrokImagineVideo(modelId: string) {

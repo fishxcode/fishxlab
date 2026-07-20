@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: prolab
+    name: fishxlab
     runtime: docker
     plan: free
     autoDeployTrigger: off

@@ -37,7 +37,7 @@ export function AppTopNav() {
                         <div className="flex min-w-0 items-center">
                             <Link to="/" className="flex h-full shrink-0 items-center gap-2 text-sm font-semibold leading-none tracking-tight text-stone-950 transition hover:text-stone-600 dark:text-stone-100 dark:hover:text-stone-300">
                                 <img src="/logo.png" alt="" className="size-6 shrink-0 rounded-md dark:invert" />
-                                <span className="text-base font-medium">ProLab</span>
+                                <span className="text-base font-medium">fishxlab</span>
                             </Link>
 
                             <button

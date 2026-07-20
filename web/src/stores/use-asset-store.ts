@@ -35,7 +35,7 @@ type AssetStore = {
     cleanupImages: (extra?: unknown) => void;
 };
 
-const ASSET_STORE_KEY = "prolab:asset_store";
+const ASSET_STORE_KEY = "fishxlab:asset_store";
 
 const assetStorage: PersistStorage<AssetStore> = {
     getItem: async (name) => {

@@ -1,6 +1,6 @@
 import { inferModelInfo } from "./model-inference";
 
-export type ProApiTokenUsage = {
+export type FishxapiTokenUsage = {
     name?: string;
     totalGranted: number;
     totalUsed: number;
@@ -33,10 +33,10 @@ type FetchUsageOptions = {
     signal?: AbortSignal;
 };
 
-export async function fetchProApiTokenUsage({ baseUrl, apiKey, signal }: FetchUsageOptions): Promise<ProApiTokenUsage> {
+export async function fetchFishxapiTokenUsage({ baseUrl, apiKey, signal }: FetchUsageOptions): Promise<FishxapiTokenUsage> {
     if (!apiKey.trim()) throw new Error("请先填写 API Key");
 
-    const response = await fetch("/api/proapi/usage/token", {
+    const response = await fetch("/api/fishxapi/usage/token", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ baseUrl, apiKey: apiKey.trim() }),
@@ -49,7 +49,7 @@ export async function fetchProApiTokenUsage({ baseUrl, apiKey, signal }: FetchUs
     return normalizeUsageData(payload.data || payload);
 }
 
-export function proApiRootUrl(baseUrl: string) {
+export function fishxapiRootUrl(baseUrl: string) {
     const trimmed = baseUrl.trim().replace(/\/+$/, "");
     return trimmed.toLowerCase().endsWith("/v1") ? trimmed.slice(0, -3) : trimmed;
 }
@@ -76,7 +76,7 @@ export function formatUsageAmount(value: number) {
     return `$${value.toFixed(6)}`;
 }
 
-function normalizeUsageData(data: unknown): ProApiTokenUsage {
+function normalizeUsageData(data: unknown): FishxapiTokenUsage {
     if (!data || typeof data !== "object") throw new Error("额度响应格式不正确");
     const value = data as Record<string, unknown>;
     return {

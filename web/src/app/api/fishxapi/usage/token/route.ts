@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { proApiRootUrl } from "@/lib/pro-spec/proapi-usage";
+import { fishxapiRootUrl } from "@/lib/pro-spec/fishxapi-usage";
 
 type UsageRequest = {
     baseUrl?: string;
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     let rootUrl: URL;
     try {
-        rootUrl = new URL(proApiRootUrl(baseUrl));
+        rootUrl = new URL(fishxapiRootUrl(baseUrl));
     } catch {
         return NextResponse.json({ success: false, message: "Base URL 格式不正确" }, { status: 400 });
     }

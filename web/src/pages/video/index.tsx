@@ -64,8 +64,8 @@ type GenerationLogConfig = Pick<AiConfig, "model" | "videoModel" | "size" | "vqu
 
 type UpdateAiConfig = <K extends keyof AiConfig>(key: K, value: AiConfig[K]) => void;
 
-const LOG_STORE_KEY = "prolab:video_generation_logs";
-const logStore = localforage.createInstance({ name: "prolab", storeName: "video_generation_logs" });
+const LOG_STORE_KEY = "fishxlab:video_generation_logs";
+const logStore = localforage.createInstance({ name: "fishxlab", storeName: "video_generation_logs" });
 
 export default function VideoPage() {
     const { message } = App.useApp();

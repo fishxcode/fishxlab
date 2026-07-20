@@ -33,7 +33,7 @@ export function getAntThemeConfig(dark: boolean): ThemeConfig {
 
     return {
         algorithm: dark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
-        cssVar: { key: dark ? "prolab-dark" : "prolab-light" },
+        cssVar: { key: dark ? "fishxlab-dark" : "fishxlab-light" },
         token: {
             colorPrimary: color.primary,
             colorInfo: color.primary,

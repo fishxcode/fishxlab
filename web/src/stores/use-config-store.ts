@@ -57,7 +57,7 @@ export type WebdavSyncConfig = {
 };
 export type ConfigTabKey = "channels" | "models" | "preferences" | "webdav" | "codex";
 
-export const CONFIG_STORE_KEY = "prolab:ai_config_store";
+export const CONFIG_STORE_KEY = "fishxlab:ai_config_store";
 export type ModelCapability = "image" | "video" | "text" | "audio";
 const CHANNEL_MODEL_SEPARATOR = "::";
 const OPENAI_BASE_URL = "https://api.openai.com";
@@ -107,7 +107,7 @@ export const defaultWebdavSyncConfig: WebdavSyncConfig = {
     url: "",
     username: "",
     password: "",
-    directory: "prolab",
+    directory: "fishxlab",
     lastSyncedAt: "",
 };
 

@@ -1,6 +1,6 @@
 # CHANGELOG
 
-本文件是 ProLab 的唯一发布公告来源。Web 端版本弹窗和文档站 `/docs/progress/changelog` 都读取这里。
+本文件是 fishxlab 的唯一发布公告来源。Web 端版本弹窗和文档站 `/docs/progress/changelog` 都读取这里。
 
 - 准备中的变更先写到 `Unreleased`。
 - 正式发版时，把 `Unreleased` 内容移动到新的 `vX.Y.Z - YYYY-MM-DD` 区块。
@@ -43,12 +43,12 @@
 
 ### 版本定位
 
-ProLab v0.0.1 是基于 `basketikun/infinite-canvas` 的初始迁移版本。这个版本保留原项目 AGPL-3.0 授权声明和 `canvas.best` 来源标识，并把 ProAPI 用户常用能力整合到 Pro Canvas 工作台。
+fishxlab v0.0.1 是基于 `basketikun/infinite-canvas` 的初始迁移版本。这个版本保留原项目 AGPL-3.0 授权声明和 `canvas.best` 来源标识，并把 fishxapi 用户常用能力整合到 Pro Canvas 工作台。
 
 ### 面向用户的变化
 
-+ [新增] 无需注册登录。应用默认在浏览器中运行，用户自行配置 ProAPI 或 OpenAI 兼容接口即可使用。
-+ [新增] ProAPI 一键接入。支持默认上游、URL 参数预填、API Key 粘贴、模型拉取、模型选择和本地持久化。
++ [新增] 无需注册登录。应用默认在浏览器中运行，用户自行配置 fishxapi 或 OpenAI 兼容接口即可使用。
++ [新增] fishxapi 一键接入。支持默认上游、URL 参数预填、API Key 粘贴、模型拉取、模型选择和本地持久化。
 + [新增] 模型图标和能力识别。模型列表会自动识别 GPT、Claude、Gemini、Grok、Doubao、Hunyuan 等模型，并显示对应图标。
 + [新增] 标准模型参数适配。覆盖 OpenAI Images、image edits、OpenAI Video 和 Grok video chat 兼容协议，`hunyuan-image-v3` 等图像模型不会错误走 chat 协议。
 + [新增] 本地数据持久化。API 配置、画布、素材、生图记录和视频记录默认保存在当前浏览器本地。

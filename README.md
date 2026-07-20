@@ -1,16 +1,16 @@
 > Fork from [basketikun/infinite-canvas](https://github.com/basketikun/infinite-canvas) — based on AGPL-3.0. This fork keeps the original author attribution and [canvas.best](https://canvas.best/) source marker.
 
 <p align="center">
-  <img src="web/public/logo.png" width="96" alt="ProLab logo">
+  <img src="web/public/logo.png" width="96" alt="fishxlab logo">
 </p>
 
-<h1 align="center">ProLab</h1>
+<h1 align="center">fishxlab</h1>
 
 <p align="center">
   <a href="https://linux.do/"><img src="https://img.shields.io/badge/Linux.do-Community-2b6de8?style=flat-square" alt="Linux.do"></a>
-  <a href="https://render.com/deploy?repo=https://github.com/proapi-hub/prolab"><img src="https://img.shields.io/badge/Render-Deploy-46e3b7?style=flat-square&logo=render&logoColor=111111" alt="Deploy to Render"></a>
-  <a href="https://github.com/proapi-hub/prolab"><img src="https://img.shields.io/github/stars/proapi-hub/prolab?style=flat-square&logo=github" alt="GitHub stars"></a>
-  <a href="https://github.com/proapi-hub/prolab/tags"><img src="https://img.shields.io/github/v/tag/proapi-hub/prolab?style=flat-square&label=version" alt="Version"></a>
+  <a href="https://render.com/deploy?repo=https://github.com/fishxcode/fishxlab"><img src="https://img.shields.io/badge/Render-Deploy-46e3b7?style=flat-square&logo=render&logoColor=111111" alt="Deploy to Render"></a>
+  <a href="https://github.com/fishxcode/fishxlab"><img src="https://img.shields.io/github/stars/fishxcode/fishxlab?style=flat-square&logo=github" alt="GitHub stars"></a>
+  <a href="https://github.com/fishxcode/fishxlab/tags"><img src="https://img.shields.io/github/v/tag/fishxcode/fishxlab?style=flat-square&label=version" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-f97316?style=flat-square" alt="License"></a>
   <a href="https://vite.dev/"><img src="https://img.shields.io/badge/Vite-7-646cff?style=flat-square&logo=vite&logoColor=white" alt="Vite"></a>
   <a href="https://reactrouter.com/"><img src="https://img.shields.io/badge/React_Router-7-ca4245?style=flat-square&logo=reactrouter&logoColor=white" alt="React Router"></a>
@@ -24,7 +24,7 @@
   <a href="docs/content/docs/overview/quick-start.mdx">快速开始</a> · <a href="docs/content/docs/overview/features.mdx">功能介绍</a> · <a href="docs/content/docs/overview/render.mdx">Render 部署</a> · <a href="docs/content/docs/overview/docker.mdx">Docker 部署</a> · <a href="docs/content/docs/canvas/canvas-node-manual.mdx">画布节点操作手册</a> · <a href="docs/content/docs/canvas/canvas-shortcuts.mdx">画布快捷键</a> · <a href="CLA.md">贡献者协议</a> · <a href="SECURITY.md">漏洞提交</a> · <a href="docs/content/docs/progress/todo.mdx">待办事项</a> · <a href="canvas-agent/README.md">本地 Canvas Agent</a> · <a href="plugins/infinite-canvas">Codex app 插件</a>
 </p>
 
-ProLab 是一款面向 ProAPI 用户优化的 Pro Canvas 创作工作台。它把画布编排、AI 图片生成、参考图编辑、对话助手、提示词库和素材沉淀放在同一个界面里，适合用来探索视觉方案并连续迭代图片结果。
+fishxlab 是一款面向 fishxapi 用户优化的 Pro Canvas 创作工作台。它把画布编排、AI 图片生成、参考图编辑、对话助手、提示词库和素材沉淀放在同一个界面里，适合用来探索视觉方案并连续迭代图片结果。
 
 > [!CAUTION]
 > 项目目前处于开发阶段，不保证历史数据兼容。各种数据库结构和存储格式都可能直接调整，欢迎关注后续更新，当前更适合个人/本地部署，不建议直接公网多人共用。
@@ -51,8 +51,8 @@ AI API Key、Base URL、画布、素材和生成记录默认保存在浏览器�
 ### 本地开发
 
 ```bash
-git clone git@github.com:proapi-hub/prolab.git
-cd prolab
+git clone git@github.com:fishxcode/fishxlab.git
+cd fishxlab
 cd web
 bun install
 bun run dev
@@ -61,8 +61,8 @@ bun run dev
 ### Docker 运行
 
 ```bash
-git clone git@github.com:proapi-hub/prolab.git
-cd prolab
+git clone git@github.com:fishxcode/fishxlab.git
+cd fishxlab
 docker compose up -d
 ```
 
@@ -84,11 +84,11 @@ docker compose up -d
 如果使用 New API，可在 `系统设置 -> 聊天方式 -> 添加聊天设置` 中填入：
 
 ```text
-https://prolab.prorisehub.com?apiKey={key}&baseUrl={address}
+https://fishxlab.fishxcode.com?apiKey={key}&baseUrl={address}
 ```
 
 跳转后会自动打开配置弹窗并填入 API Key 和 Base URL。
-如果自己部署了，可以把 `https://prolab.prorisehub.com` 替换成你部署的地址。
+如果自己部署了，可以把 `https://fishxlab.fishxcode.com` 替换成你部署的地址。
 
 ## 效果展示
 
@@ -113,7 +113,7 @@ https://prolab.prorisehub.com?apiKey={key}&baseUrl={address}
 
 ## 联系方式
 
-- [在线文档](https://newdocs.prorisehub.com/)
+- [在线文档](https://docs.fishxcode.com/)
 - [快速开始](docs/content/docs/overview/quick-start.mdx)
 - [功能介绍](docs/content/docs/overview/features.mdx)
 - [Render 部署](docs/content/docs/overview/render.mdx)
@@ -158,10 +158,10 @@ https://prolab.prorisehub.com?apiKey={key}&baseUrl={address}
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=proapi-hub%2Fprolab&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=fishxcode%2Ffishxlab&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=proapi-hub/prolab&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=proapi-hub/prolab&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=proapi-hub/prolab&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=fishxcode/fishxlab&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=fishxcode/fishxlab&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=fishxcode/fishxlab&type=date&legend=top-left" />
  </picture>
 </a>

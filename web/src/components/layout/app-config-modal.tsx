@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { ModelPicker } from "@/components/model-picker";
 import { QuickConnectModal } from "@/components/onboarding/quick-connect-modal";
 import { DEFAULT_UPSTREAM } from "@/lib/pro-spec/constants";
-import { fetchProApiTokenUsage, formatUsageAmount, summarizeModelCategories, type ProApiTokenUsage } from "@/lib/pro-spec/proapi-usage";
+import { fetchFishxapiTokenUsage, formatUsageAmount, summarizeModelCategories, type FishxapiTokenUsage } from "@/lib/pro-spec/fishxapi-usage";
 import { fetchChannelModels } from "@/services/api/image";
 import { syncAppDataToWebdav, type AppSyncDomainKey, type AppSyncProgressEvent } from "@/services/app-sync";
 import { testWebdavConnection, WEBDAV_MANIFEST_FILE_NAME } from "@/services/webdav-sync";
@@ -79,9 +79,9 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
     const [testingWebdav, setTestingWebdav] = useState(false);
     const [syncingWebdav, setSyncingWebdav] = useState(false);
     const [quickConnectOpen, setQuickConnectOpen] = useState(false);
-    const [proApiUsage, setProApiUsage] = useState<ProApiTokenUsage | null>(null);
-    const [proApiUsageError, setProApiUsageError] = useState("");
-    const [loadingProApiUsage, setLoadingProApiUsage] = useState(false);
+    const [fishxapiUsage, setFishxapiUsage] = useState<FishxapiTokenUsage | null>(null);
+    const [fishxapiUsageError, setFishxapiUsageError] = useState("");
+    const [loadingFishxapiUsage, setLoadingFishxapiUsage] = useState(false);
     const [modelSelection, setModelSelection] = useState<ModelSelectionDraft | null>(null);
     const [webdavSyncStatus, setWebdavSyncStatus] = useState("");
     const [webdavDomainProgress, setWebdavDomainProgress] = useState(createWebdavDomainProgress);
@@ -104,8 +104,8 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
     const disconnectAgent = useCanvasAgentStore((state) => state.disconnectAgent);
     const modelOptions = config.models.map((model) => ({ label: modelOptionLabel(config, model), value: model, searchText: modelOptionSearchText(config, model) }));
     const webdavReady = Boolean(webdav.url.trim());
-    const proApiChannel = config.channels[0];
-    const proApiModelSummary = summarizeModelCategories(proApiChannel?.models || []);
+    const fishxapiChannel = config.channels[0];
+    const fishxapiModelSummary = summarizeModelCategories(fishxapiChannel?.models || []);
     useEffect(() => setActiveTab(initialTab), [initialTab]);
 
     const saveConfig = (nextConfig: AiConfig) => {
@@ -213,24 +213,24 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
         }
     };
 
-    const refreshProApiUsage = async () => {
-        const channel = proApiChannel;
+    const refreshFishxapiUsage = async () => {
+        const channel = fishxapiChannel;
         if (!channel?.baseUrl.trim() || !channel.apiKey.trim()) {
-            message.error("请先完成 ProAPI 一键接入或填写主渠道 API Key");
+            message.error("请先完成 fishxapi 一键接入或填写主渠道 API Key");
             return;
         }
-        setLoadingProApiUsage(true);
-        setProApiUsageError("");
+        setLoadingFishxapiUsage(true);
+        setFishxapiUsageError("");
         try {
-            const usage = await fetchProApiTokenUsage({ baseUrl: channel.baseUrl, apiKey: channel.apiKey });
-            setProApiUsage(usage);
-            message.success("ProAPI 额度已更新");
+            const usage = await fetchFishxapiTokenUsage({ baseUrl: channel.baseUrl, apiKey: channel.apiKey });
+            setFishxapiUsage(usage);
+            message.success("fishxapi 额度已更新");
         } catch (error) {
             const text = error instanceof Error ? error.message : "额度查询失败";
-            setProApiUsageError(text);
+            setFishxapiUsageError(text);
             message.error(text);
         } finally {
-            setLoadingProApiUsage(false);
+            setLoadingFishxapiUsage(false);
         }
     };
 
@@ -334,21 +334,21 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                                 <section className="mb-4 rounded-lg border border-border p-3">
                                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                                         <div>
-                                            <div className="text-sm font-semibold">ProAPI 状态</div>
+                                            <div className="text-sm font-semibold">fishxapi 状态</div>
                                             <div className="mt-1 text-xs text-muted-foreground">这里只使用 sk- API Key 查询模型与额度，不需要 AccessToken。</div>
                                         </div>
-                                        <Button size="small" icon={<RefreshCw className="size-3.5" />} loading={loadingProApiUsage} onClick={() => void refreshProApiUsage()}>
+                                        <Button size="small" icon={<RefreshCw className="size-3.5" />} loading={loadingFishxapiUsage} onClick={() => void refreshFishxapiUsage()}>
                                             刷新额度
                                         </Button>
                                     </div>
                                     <div className="grid gap-2 text-sm md:grid-cols-5">
-                                        <StatusItem label="主渠道" value={proApiChannel?.name || "未配置"} />
-                                        <StatusItem label="模型" value={`${proApiModelSummary.total} 个`} />
-                                        <StatusItem label="图像 / 视频" value={`${proApiModelSummary.image} / ${proApiModelSummary.video}`} />
-                                        <StatusItem label="剩余额度" value={proApiUsage ? (proApiUsage.unlimitedQuota ? "无限额度" : formatUsageAmount(proApiUsage.totalAvailable)) : "未查询"} />
-                                        <StatusItem label="模型白名单" value={proApiUsage ? (proApiUsage.modelLimitsEnabled ? `${proApiUsage.modelLimits.length} 个` : "未限制") : "未查询"} />
+                                        <StatusItem label="主渠道" value={fishxapiChannel?.name || "未配置"} />
+                                        <StatusItem label="模型" value={`${fishxapiModelSummary.total} 个`} />
+                                        <StatusItem label="图像 / 视频" value={`${fishxapiModelSummary.image} / ${fishxapiModelSummary.video}`} />
+                                        <StatusItem label="剩余额度" value={fishxapiUsage ? (fishxapiUsage.unlimitedQuota ? "无限额度" : formatUsageAmount(fishxapiUsage.totalAvailable)) : "未查询"} />
+                                        <StatusItem label="模型白名单" value={fishxapiUsage ? (fishxapiUsage.modelLimitsEnabled ? `${fishxapiUsage.modelLimits.length} 个` : "未限制") : "未查询"} />
                                     </div>
-                                    {proApiUsageError ? <div className="mt-2 text-xs text-muted-foreground">额度未读取：{proApiUsageError}</div> : null}
+                                    {fishxapiUsageError ? <div className="mt-2 text-xs text-muted-foreground">额度未读取：{fishxapiUsageError}</div> : null}
                                 </section>
                                 <div className="space-y-3">
                                     {config.channels.map((channel) => (
@@ -496,7 +496,7 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                                             <Input value={webdav.url} placeholder="https://nas.example.com/webdav" onChange={(event) => updateWebdavConfig("url", event.target.value)} />
                                         </Form.Item>
                                         <Form.Item label="远程目录" extra={`会在该目录下分业务目录保存，每个目录包含 ${WEBDAV_MANIFEST_FILE_NAME} 和 files/`} className="mb-4">
-                                            <Input value={webdav.directory} placeholder="prolab" onChange={(event) => updateWebdavConfig("directory", event.target.value)} />
+                                            <Input value={webdav.directory} placeholder="fishxlab" onChange={(event) => updateWebdavConfig("directory", event.target.value)} />
                                         </Form.Item>
                                         <Form.Item label="用户名" className="mb-0">
                                             <Input value={webdav.username} autoComplete="username" onChange={(event) => updateWebdavConfig("username", event.target.value)} />

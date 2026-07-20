@@ -99,7 +99,7 @@ export async function archiveCodexThread(emit: AgentEmit, threadId: string, cwd?
 
 export function runClaudeTurn(prompt: string, emit: AgentEmit) {
     if (!prompt.trim()) return;
-    const child = spawnAgent("claude", ["-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages", "--allowedTools", "mcp__prolab__*", prompt], ["ignore", "pipe", "pipe"], emit);
+    const child = spawnAgent("claude", ["-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages", "--allowedTools", "mcp__fishxlab__*", prompt], ["ignore", "pipe", "pipe"], emit);
     if (!child) return;
     pipeJsonLines(child, emit, "claude");
 }
@@ -154,7 +154,7 @@ class CodexAppClient {
             codexThreadId = "";
             emit("agent_log", { text: `Codex app-server exited: ${code ?? 0}` });
         });
-        await client.request("initialize", { clientInfo: { name: "canvas-agent", title: "ProLab Agent", version: VERSION }, capabilities: { experimentalApi: true, requestAttestation: false } });
+        await client.request("initialize", { clientInfo: { name: "canvas-agent", title: "fishxlab Agent", version: VERSION }, capabilities: { experimentalApi: true, requestAttestation: false } });
         client.notify("initialized");
         return client;
     }
@@ -298,7 +298,7 @@ function canvasAgentMcpCommand() {
 }
 
 function codexConfig() {
-    return { mcp_servers: { "prolab": { command: canvasAgentMcp.command, args: canvasAgentMcp.args, default_tools_approval_mode: "approve", startup_timeout_sec: 20, tool_timeout_sec: 90 } } };
+    return { mcp_servers: { "fishxlab": { command: canvasAgentMcp.command, args: canvasAgentMcp.args, default_tools_approval_mode: "approve", startup_timeout_sec: 20, tool_timeout_sec: 90 } } };
 }
 
 function codexInput(prompt: string, images: string[]) {
@@ -461,7 +461,7 @@ async function writeAttachmentFiles(attachments: AgentAttachment[]) {
 async function writeAttachmentFile(item: AgentAttachment) {
     const [, meta = "", data = ""] = item.dataUrl?.match(/^data:([^;]+);base64,(.+)$/) || [];
     if (!data) throw new Error(`图片附件无效：${item.name || "未命名图片"}`);
-    const file = path.join(os.tmpdir(), `prolab-${Date.now()}-${Math.random().toString(16).slice(2)}.${imageExt(meta || item.type)}`);
+    const file = path.join(os.tmpdir(), `fishxlab-${Date.now()}-${Math.random().toString(16).slice(2)}.${imageExt(meta || item.type)}`);
     await fs.writeFile(file, Buffer.from(data, "base64"));
     return file;
 }

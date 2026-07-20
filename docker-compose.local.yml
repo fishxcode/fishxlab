@@ -1,6 +1,6 @@
 services:
   app:
-    image: prolab:local
+    image: fishxlab:local
     build:
       context: .
       dockerfile: Dockerfile

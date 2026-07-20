@@ -38,7 +38,7 @@ const features: HomeFeature[] = [
     },
     {
         icon: Server,
-        title: "ProAPI 一键接入",
+        title: "fishxapi 一键接入",
         desc: "粘贴 API Key 后自动拉取模型、识别类型和能力，并按模型协议生成正确请求参数。",
         href: "/settings",
         action: "config",
@@ -58,7 +58,7 @@ const features: HomeFeature[] = [
 ];
 
 const stats = [
-    { value: "40+", label: "ProAPI 模型" },
+    { value: "40+", label: "fishxapi 模型" },
     { value: "4", label: "标准协议" },
     { value: "100+", label: "模型图标" },
     { value: "0", label: "后端数据库" },
@@ -101,7 +101,7 @@ export default function IndexPage() {
                     </h1>
 
                     <p className="mx-auto mt-8 max-w-2xl text-balance text-lg leading-8 text-muted-foreground md:text-xl">
-                        ProLab 是面向 ProAPI 用户优化的 Pro Canvas 创作工作台。把绘图、视频、对话助手、模型选择和素材沉淀放在一个干净、克制、专业的界面里。
+                        fishxlab 是面向 fishxapi 用户优化的 Pro Canvas 创作工作台。把绘图、视频、对话助手、模型选择和素材沉淀放在一个干净、克制、专业的界面里。
                     </p>
 
                     <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
@@ -236,7 +236,7 @@ export default function IndexPage() {
 
             <footer className="relative border-t border-border bg-background">
                 <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-muted-foreground md:flex-row">
-                    <div>© {new Date().getFullYear()} ProLab · Pro Canvas for ProAPI</div>
+                    <div>© {new Date().getFullYear()} fishxlab · Pro Canvas for fishxapi</div>
                     <div className="flex flex-wrap items-center justify-center gap-5">
                         <button type="button" onClick={openConfig} className="transition hover:text-foreground">
                             设置
