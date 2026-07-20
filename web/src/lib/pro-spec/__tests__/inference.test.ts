@@ -211,12 +211,28 @@ describe("pro-spec provider adapter", () => {
         const form = request.init.body as FormData;
         expect(form.get("model")).toBe("grok-image-video");
     });
+
+    test("marks Grok video URL responses as direct resources", async () => {
+        const request = buildRequest({
+            modelId: "grok-image-video",
+            prompt: "video",
+            baseUrl: "https://api.fishxcode.com",
+            apiKey: "sk-test",
+        });
+        const parsed = await request.parseResponse(new Response(JSON.stringify({ data: { url: "https://cdn.example.com/video.mp4" } }), { status: 200 }));
+        expect(parsed.resourceUrl).toBe("https://cdn.example.com/video.mp4");
+        expect(parsed.kind).toBe("url");
+    });
 });
 
 describe("pro-spec fishxapi usage", () => {
     test("normalizes fishxapi root URL", () => {
         expect(fishxapiRootUrl("https://api.fishxcode.com/v1")).toBe("https://api.fishxcode.com");
         expect(fishxapiRootUrl("https://api.fishxcode.com/")).toBe("https://api.fishxcode.com");
+    });
+
+    test("rejects non-fishxapi usage hosts", () => {
+        expect(() => fishxapiRootUrl("https://internal.example.com/v1")).toThrow("fishxapi");
     });
 
     test("summarizes model categories", () => {
@@ -266,6 +282,7 @@ describe("pro-spec fishxapi usage", () => {
             globalThis.fetch = originalFetch;
         }
     });
+
 });
 
 describe("model channel routing", () => {

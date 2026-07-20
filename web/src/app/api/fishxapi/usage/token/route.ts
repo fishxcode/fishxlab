@@ -16,8 +16,8 @@ export async function POST(request: Request) {
     let rootUrl: URL;
     try {
         rootUrl = new URL(fishxapiRootUrl(baseUrl));
-    } catch {
-        return NextResponse.json({ success: false, message: "Base URL 格式不正确" }, { status: 400 });
+    } catch (error) {
+        return NextResponse.json({ success: false, message: error instanceof Error ? error.message : "Base URL 格式不正确" }, { status: 400 });
     }
     if (rootUrl.protocol !== "https:") return NextResponse.json({ success: false, message: "Base URL 必须使用 HTTPS" }, { status: 400 });
 

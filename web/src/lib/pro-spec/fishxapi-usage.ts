@@ -50,8 +50,10 @@ export async function fetchFishxapiTokenUsage({ baseUrl, apiKey, signal }: Fetch
 }
 
 export function fishxapiRootUrl(baseUrl: string) {
-    const trimmed = baseUrl.trim().replace(/\/+$/, "");
-    return trimmed.toLowerCase().endsWith("/v1") ? trimmed.slice(0, -3) : trimmed;
+    const url = new URL(baseUrl.trim().replace(/\/+$/, ""));
+    if (url.hostname !== "api.fishxcode.com") throw new Error("fishxapi 额度查询仅支持 api.fishxcode.com");
+    const value = url.toString().replace(/\/+$/, "");
+    return value.toLowerCase().endsWith("/v1") ? value.slice(0, -3) : value;
 }
 
 export function summarizeModelCategories(modelIds: string[]): ModelCategorySummary {

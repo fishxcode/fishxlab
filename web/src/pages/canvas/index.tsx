@@ -62,7 +62,7 @@ export default function CanvasPage() {
     useEffect(() => {
         if (!hydrated || autoOpenRef.current || (mode !== "new" && mode !== "recent")) return;
         autoOpenRef.current = true;
-        enterProject(mode === "new" ? createProject(`无限画布 ${projects.length + 1}`) : projects[0]?.id || createProject(`无限画布 ${projects.length + 1}`));
+        enterProject(mode === "new" ? createProject(`Pro Canvas ${projects.length + 1}`) : projects[0]?.id || createProject(`Pro Canvas ${projects.length + 1}`));
     }, [createProject, hydrated, mode, projects]);
 
     if (hydrated && (mode === "new" || mode === "recent")) return <main className="flex h-full items-center justify-center bg-background text-sm text-stone-500">正在打开画布...</main>;

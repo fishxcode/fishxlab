@@ -18,6 +18,7 @@ type BuildRequestOptions = {
 type ParsedResource = {
     resourceUrl?: string;
     resources?: string[];
+    kind?: "task" | "url";
     error?: string;
 };
 
@@ -208,8 +209,8 @@ async function parseVideoTaskResponse(resp: Response): Promise<ParsedResource> {
     const { payload, error } = await parseJsonResponse(resp);
     if (error) return { error };
     const data = (payload.data && typeof payload.data === "object" ? payload.data : payload) as Record<string, unknown>;
-    if (typeof data.id === "string" && data.id) return { resourceUrl: data.id };
-    if (typeof data.url === "string" && data.url) return { resourceUrl: data.url };
+    if (typeof data.id === "string" && data.id) return { resourceUrl: data.id, kind: "task" };
+    if (typeof data.url === "string" && data.url) return { resourceUrl: data.url, kind: "url" };
     return { error: "视频接口没有返回任务 ID" };
 }
 

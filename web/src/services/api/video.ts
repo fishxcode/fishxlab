@@ -137,7 +137,7 @@ async function createGrokVideoTask(config: AiConfig, model: string, prompt: stri
         const parsed = await providerRequest.parseResponse(response);
         if (parsed.error) throw new Error(parsed.error);
         if (!parsed.resourceUrl) throw new Error("视频接口没有返回任务 ID 或视频 URL");
-        return { id: parsed.resourceUrl, provider: providerRequest.apiFormat === "grok-video-chat" ? "direct" : "openai", model };
+        return { id: parsed.resourceUrl, provider: providerRequest.apiFormat === "grok-video-chat" || parsed.kind === "url" ? "direct" : "openai", model };
     } catch (error) {
         throw new Error(readAxiosError(error, "Grok 视频任务创建失败"));
     }

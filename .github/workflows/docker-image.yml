@@ -62,8 +62,8 @@ jobs:
           script: |
             set -e
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
             cd /opt/fishxlab
             docker compose pull
             docker compose up -d
-            docker logout ghcr.io
             docker image prune -f
